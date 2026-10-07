@@ -574,6 +574,33 @@ html.reduce-transparency .dialog { background: var(--surface); -webkit-backdrop-
 @keyframes drop { from { transform: translateY(-12px); opacity: 0; } }
 
 /* ---------- library & learn ---------- */
+.target-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 16px; background: var(--surface-2); }
+.target-card.up { background: var(--good-wash); }
+.target-card.swim { background: var(--pool-wash); }
+.target-card .tc-main { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1.15; }
+.cue-card { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.cues { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cues li { display: flex; gap: 10px; font-weight: 600; }
+.cues li::before { content: ''; flex: none; width: 8px; height: 8px; margin-top: 8px; border-radius: 50%; background: var(--good); }
+.disclosure { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 0 14px; }
+.disclosure > summary { list-style: none; cursor: pointer; padding: 14px 0; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::after { content: '+'; font-size: 22px; line-height: 1; font-weight: 500; color: var(--muted); }
+.disclosure[open] > summary::after { content: '−'; }
+.disclosure > :last-child { padding-bottom: 14px; }
+
+/* ---------- workout page ---------- */
+.wk-hero {
+  position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 18px;
+  border-radius: 24px; border: 1px solid var(--line); background: var(--surface);
+}
+.wk-hero.gym { background: linear-gradient(160deg, var(--iron-wash), var(--surface) 75%); }
+.wk-hero.swim { background: linear-gradient(160deg, var(--pool-wash), var(--surface) 75%); }
+.wk-hero h1 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-3xl); line-height: 1; }
+.wk-hero .lanes { position: absolute; inset: 0 0 auto auto; width: 120px; height: 100%; pointer-events: none; opacity: .45; }
+.wk-hero > :not(.lanes) { position: relative; }
+.wk-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.wk-meta span { padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 70%, transparent); font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2); }
 .tile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .tile {
   display: flex; flex-direction: column; gap: 4px; padding: 0 0 12px; overflow: hidden; text-align: left; cursor: pointer;

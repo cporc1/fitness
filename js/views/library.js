@@ -1,14 +1,13 @@
 // Exercise & swim-drill library, plus the shared exercise detail content.
 
 import * as store from '../store.js';
-import { h, icon, ICONS, fmtDate, fmtNum, uid, put, fill } from '../util.js';
+import { h, icon, ICONS, fmtDate, fmtNum, fmtClock, uid, fill } from '../util.js';
 import { ctx } from '../app.js';
 import { GROUPS, getExercise, allExercises } from '../data/exercises.js';
 import { getDrill } from '../data/swim.js';
 import { framesFor } from '../data/media.js';
-import { demoMedia, demoVideo } from '../media.js';
+import { demoFrames, demoVideo } from '../media.js';
 import { exerciseHistory, exerciseRecords } from '../stats.js';
-import { lineChart } from '../charts.js';
 import { listItem, sheet, input, field, select, toast, confirmDialog } from '../ui.js';
 
 const TYPE_LABEL = {
@@ -25,48 +24,69 @@ export function fmtSet(st, type, unit) {
   return `${fmtNum(st.w, 1)} × ${st.r ?? '–'}`;
 }
 
-/** Instructions + personal history for one exercise. */
-export function exerciseInfo(exId, { compact = false } = {}) {
+/** "3 × 10–15 per side" for a workout item. */
+export function targetText(item, def) {
+  const unitWord = def?.type === 'time' ? ' s' : def?.type === 'cardio' ? ' min' : '';
+  const [lo, hi] = item.reps;
+  return `${item.sets} × ${lo === hi ? lo : `${lo}–${hi}`}${unitWord}${def?.unilateral ? ' per side' : ''}`;
+}
+
+function cueCard(cues) {
+  return h('div', { class: 'cue-card' },
+    h('div', { class: 'eyebrow' }, 'Focus on'),
+    h('ul', { class: 'cues' }, cues.slice(0, 3).map((c) => h('li', null, c))));
+}
+
+function stepsDisclosure(steps, open = false) {
+  return h('details', { class: 'disclosure', open },
+    h('summary', null, `Step by step · ${steps.length} steps`),
+    h('ol', { class: 'steps' }, steps.map((t) => h('li', null, t))));
+}
+
+function historyBlock(exId, def, sessions, unit) {
+  const hist = exerciseHistory(exId, sessions, unit);
+  if (!hist.length) return h('p', { class: 'small muted' }, 'You haven\'t logged this exercise yet.');
+  const rec = exerciseRecords(exId, sessions, unit);
+  const recRows = [];
+  if (rec.heaviest) recRows.push(h('div', null, h('span', { class: 'k' }, 'Heaviest'), h('span', { class: 'v' }, `${fmtNum(rec.heaviest.w, 1)} ${unit}`)));
+  if (rec.bestE1rm) recRows.push(h('div', null, h('span', { class: 'k' }, 'Est. 1-rep max'), h('span', { class: 'v' }, `${fmtNum(rec.bestE1rm.value, 0)} ${unit}`)));
+  if (rec.longest) recRows.push(h('div', null, h('span', { class: 'k' }, 'Longest'), h('span', { class: 'v' }, `${rec.longest.sec} s`)));
+  if (!rec.heaviest && rec.mostReps) recRows.push(h('div', null, h('span', { class: 'k' }, 'Most reps'), h('span', { class: 'v' }, String(rec.mostReps.r))));
+  return h('div', { class: 'section' },
+    h('div', { class: 'eyebrow' }, 'Your history'),
+    recRows.length ? h('div', { class: 'kv' }, recRows) : null,
+    h('div', { class: 'card flush' }, h('div', { class: 'list' }, hist.slice(0, 3).map((x) => h('div', { class: 'list-item', style: { cursor: 'default' } },
+      h('div', { class: 'grow' },
+        h('div', { class: 'li-title' }, fmtDate(x.date, { weekday: true })),
+        h('div', { class: 'li-sub num' }, x.sets.map((st) => fmtSet(st, def.type, unit)).join(' · '))))))));
+}
+
+/**
+ * Everything about one exercise, most useful first: the moving photos, how to
+ * find the machine, today's target, three cues, the video, then the details.
+ */
+export function exerciseInfo(exId, { item, suggestion } = {}) {
   const def = getExercise(exId);
   if (!def) return h('p', { class: 'muted' }, 'Exercise not found.');
   const { sessions, profile } = ctx();
   const unit = profile?.units || 'lb';
-  const hist = exerciseHistory(exId, sessions, unit);
-  const rec = exerciseRecords(exId, sessions, unit);
-
-  const parts = [
-    h('div', { class: 'row wrap' },
+  return h('div', { class: 'stack lg' },
+    demoFrames(exId, def.name),
+    h('div', { class: 'row wrap', style: { gap: '6px' } },
       h('span', { class: 'chip gym' }, def.group),
       h('span', { class: 'chip plain' }, def.equipment),
       def.unilateral ? h('span', { class: 'chip plain' }, 'One side at a time') : null),
-    h('p', { class: 'ink-2' }, h('strong', null, 'Works: '), def.muscles),
-    demoMedia(exId, def.name),
+    h('p', { class: 'small ink-2' }, h('strong', null, 'Works: '), def.muscles),
+    item ? h('div', { class: `target-card${suggestion?.kind === 'up' ? ' up' : ''}` },
+      h('div', { class: 'eyebrow' }, 'In this workout'),
+      h('div', { class: 'tc-main' }, `${targetText(item, def)}${item.rest ? ` · rest ${fmtClock(item.rest)}` : ''}`),
+      suggestion?.text ? h('div', { class: 'small ink-2' }, suggestion.text) : null) : null,
     findIt(def),
-  ];
-  if (def.steps?.length) parts.push(h('div', { class: 'section' }, h('div', { class: 'eyebrow' }, 'How to do it'), h('ol', { class: 'steps' }, def.steps.map((t) => h('li', null, t)))));
-  if (def.cues?.length) parts.push(h('div', { class: 'callout' }, h('strong', null, 'Cues: '), def.cues.join(' · ')));
-  if (def.mistakes?.length) parts.push(h('div', { class: 'callout warn' }, h('strong', null, 'Avoid: '), def.mistakes.join(' · ')));
-
-  if (hist.length) {
-    const recRows = [];
-    if (rec.heaviest) recRows.push(h('div', null, h('span', { class: 'k' }, 'Heaviest'), h('span', { class: 'v' }, `${fmtNum(rec.heaviest.w, 1)} ${unit}`)));
-    if (rec.bestE1rm) recRows.push(h('div', null, h('span', { class: 'k' }, 'Est. 1-rep max'), h('span', { class: 'v' }, `${fmtNum(rec.bestE1rm.value, 0)} ${unit}`)));
-    if (rec.longest) recRows.push(h('div', null, h('span', { class: 'k' }, 'Longest'), h('span', { class: 'v' }, `${rec.longest.sec} s`)));
-    if (!rec.heaviest && rec.mostReps) recRows.push(h('div', null, h('span', { class: 'k' }, 'Most reps'), h('span', { class: 'v' }, String(rec.mostReps.r))));
-    parts.push(h('div', { class: 'section' },
-      h('div', { class: 'eyebrow' }, 'Your history'),
-      recRows.length ? h('div', { class: 'kv' }, recRows) : null,
-      !compact && hist.length > 1 && hist.some((x) => x.e1rm)
-        ? lineChart({ points: hist.filter((x) => x.e1rm).map((x) => ({ x: x.date, y: x.e1rm })).reverse(), color: 'var(--iron)', fmt: (v) => `${fmtNum(v, 0)}` , tipFmt: (p) => `${fmtDate(p.x)}: est. 1RM ${fmtNum(p.y, 0)} ${unit}` })
-        : null,
-      h('div', { class: 'card flush' }, h('div', { class: 'list' }, hist.slice(0, compact ? 3 : 8).map((x) => h('div', { class: 'list-item', style: { cursor: 'default' } },
-        h('div', { class: 'grow' },
-          h('div', { class: 'li-title' }, fmtDate(x.date, { weekday: true })),
-          h('div', { class: 'li-sub num' }, x.sets.map((st) => fmtSet(st, def.type, unit)).join(' · ')))))))));
-  } else {
-    parts.push(h('p', { class: 'small muted' }, 'You have not logged this exercise yet.'));
-  }
-  return h('div', { class: 'stack lg' }, ...parts);
+    def.cues?.length ? cueCard(def.cues) : null,
+    demoVideo(exId),
+    def.steps?.length ? stepsDisclosure(def.steps) : null,
+    def.mistakes?.length ? h('div', { class: 'callout warn' }, h('strong', null, 'Avoid: '), def.mistakes.join(' · ')) : null,
+    historyBlock(exId, def, sessions, unit));
 }
 
 /** "Find it in the gym": other names and what the equipment looks like. */
@@ -92,10 +112,11 @@ export function exThumb(exId) {
   return f ? h('img', { class: 'ex-thumb', src: f.srcs[0], alt: '', loading: 'lazy', decoding: 'async' }) : null;
 }
 
-export function openExerciseSheet(exId) {
+/** The exercise sheet. Opened from a workout, pass { item, suggestion } to show today's target. */
+export function openExerciseSheet(exId, opts = {}) {
   const def = getExercise(exId);
-  sheet(def?.name || 'Exercise', (close) => h('div', { class: 'stack lg' },
-    exerciseInfo(exId, { compact: true }),
+  return sheet(def?.name || 'Exercise', (close) => h('div', { class: 'stack lg' },
+    exerciseInfo(exId, opts),
     def?.custom ? h('button', {
       class: 'btn ghost', onclick: async () => {
         const ok = await confirmDialog({ title: `Delete ${def.name}?`, message: 'Workouts you already logged keep it.', confirm: 'Delete', danger: true });
@@ -106,19 +127,21 @@ export function openExerciseSheet(exId) {
     }, icon(ICONS.trash, 18), 'Delete this exercise') : null));
 }
 
-export function drillInfo(drillId) {
+/** A swim stroke or drill: video first, then what to focus on and the steps. */
+export function drillInfo(drillId, { target } = {}) {
   const d = getDrill(drillId);
   if (!d) return h('p', { class: 'muted' }, 'Drill not found.');
   return h('div', { class: 'stack lg' },
     h('p', { class: 'ink-2' }, d.purpose),
+    target ? h('div', { class: 'target-card swim' }, h('div', { class: 'eyebrow' }, 'In this workout'), h('div', { class: 'tc-main' }, target)) : null,
     demoVideo(drillId),
-    h('div', { class: 'section' }, h('div', { class: 'eyebrow' }, 'How to do it'), h('ol', { class: 'steps' }, d.steps.map((t) => h('li', null, t)))),
-    h('div', { class: 'callout' }, h('strong', null, 'Focus on: '), d.cues.join(' · ')));
+    d.cues?.length ? cueCard(d.cues) : null,
+    d.steps?.length ? stepsDisclosure(d.steps, true) : null);
 }
 
-export function openDrillSheet(drillId) {
+export function openDrillSheet(drillId, opts = {}) {
   const d = getDrill(drillId);
-  sheet(d?.name || 'Drill', drillInfo(drillId));
+  return sheet(d?.name || 'Drill', drillInfo(drillId, opts));
 }
 
 /**

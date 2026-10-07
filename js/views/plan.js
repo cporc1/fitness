@@ -80,7 +80,7 @@ function workoutsThisPhase(state) {
   const gym = gymTemplatesForPhase(phase.id, state.profile?.split).map((t) => listItem({
     title: t.name, sub: `${t.exercises.length} exercises · ${t.focus}`,
     leading: h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),
-    onclick: () => go('template', { id: t.id }),
+    onclick: () => go('workout', { id: t.id }),
   }));
   const swim = swimTemplateKeys(state.profile?.swimLevel || 'novice', phase.id).map((k) => {
     const w = getSwimWorkout(k, state.settings?.swimMode || 'full');
@@ -88,7 +88,7 @@ function workoutsThisPhase(state) {
     return listItem({
       title: w.name, sub: `${dist ? `${dist} ${unitD} · ` : ''}${w.focus}`,
       leading: h('span', { class: 'sr-icon swim' }, icon(ICONS.wave)),
-      onclick: () => go('template', { id: w.id }),
+      onclick: () => go('workout', { id: w.id }),
     });
   });
   return h('div', { class: 'card flush session-row' }, h('div', { class: 'list' }, gym, swim));
@@ -100,7 +100,7 @@ function customList(state) {
     items.map((t) => listItem({
       title: t.name, sub: t.kind === 'swim' ? 'Swim' : `${t.exercises.length} exercises`,
       leading: h('span', { class: `sr-icon ${t.kind}` }, icon(t.kind === 'swim' ? ICONS.wave : ICONS.dumbbell)),
-      onclick: () => go('template', { id: t.id }),
+      onclick: () => go('workout', { id: t.id }),
     })),
     listItem({ title: 'Create a workout', sub: 'Build your own gym or swim session', leading: h('span', { class: 'sr-icon other' }, icon(ICONS.plus)), onclick: () => go('builder', {}) })));
 }
@@ -185,67 +185,6 @@ registerRoute('plan', (_p, state) => h('div', { class: 'view' },
   h('section', { class: 'section' }, sectionHead('This phase'), workoutsThisPhase(state)),
   h('section', { class: 'section' }, sectionHead('Your workouts'), customList(state)),
   h('section', { class: 'section' }, sectionHead('Program settings'), programSettings(state))));
-
-// ---------------- template detail ----------------
-
-registerRoute('template', ({ id }, state) => {
-  const t = templateById(id, state.custom, state.settings?.swimMode || 'full');
-  if (!t) return h('div', { class: 'view' }, topbar({ title: 'Workout', onBack: back }), h('p', { class: 'muted' }, 'This workout no longer exists.'));
-  const isSwim = id.startsWith('swim:') || t.kind === 'swim';
-  const isCustom = !!state.custom?.templates?.find((c) => c.id === id);
-  const view = h('div', { class: 'view' },
-    topbar({ title: '', onBack: back, actions: isCustom ? [h('button', { class: 'icon-btn', 'aria-label': 'Edit workout', onclick: () => go('builder', { id }) }, icon(ICONS.edit))] : [] }),
-    pageHead(t.name, isSwim ? 'Swim workout' : (t.phase ? `Gym · Phase ${t.phase}` : 'Gym workout'), t.focus ? h('p', { class: 'ink-2' }, t.focus) : null));
-
-  if (isSwim) {
-    const poolLen = state.profile?.pool?.len || 25;
-    const unitD = state.profile?.pool?.unit || 'yd';
-    const blocks = expandForPool(t.blocks || [], poolLen, state.profile?.swimLevel);
-    const dist = workoutDistance(blocks);
-    if (dist) put(view, h('div', { class: 'kv' }, h('div', null, h('span', { class: 'k' }, 'Total'), h('span', { class: 'v' }, `${dist} ${unitD}`)), h('div', null, h('span', { class: 'k' }, 'Lengths'), h('span', { class: 'v' }, String(dist / poolLen)))));
-    for (const b of blocks) {
-      put(view, h('section', { class: 'swim-block' }, h('h3', null, b.name), b.items.map((it) => {
-        const guide = guideForItem(it);
-        return h('div', { class: `swim-item${guide ? ' tap-row' : ''}`, onclick: guide ? () => openDrillSheet(guide) : null },
-          h('div', { class: 'si-main' }, h('span', { class: 'si-reps' }, `${it.reps} ×`), h('span', { class: 'si-what' }, describeItem(it, unitD))),
-          h('div', { class: 'si-meta' }, it.rest ? `rest ${it.rest} s` : 'no set rest'),
-          it.note ? h('div', { class: 'small ink-2' }, it.note) : null,
-          howToLink(it, openDrillSheet, ' →'));
-      })));
-    }
-    put(view, h('button', { class: 'btn pool lg block', onclick: () => startSwim(t) }, icon(ICONS.play, 20), 'Start this swim'));
-  } else {
-    const swaps = isCustom ? {} : state.swaps || {};
-    put(view, h('div', { class: 'card flush' }, h('div', { class: 'list' }, (t.exercises || []).map((item) => {
-      const exId = swaps[item.ex] || item.ex;
-      const def = getExercise(exId);
-      const unitWord = def?.type === 'time' ? ' s' : def?.type === 'cardio' ? ' min' : '';
-      return listItem({
-        title: def?.name || exId,
-        sub: `${item.sets} × ${item.reps[0]}–${item.reps[1]}${unitWord}${item.rest ? ` · rest ${fmtClock(item.rest)}` : ''}${swaps[item.ex] ? ' · swapped' : ''}`,
-        leading: exThumb(exId),
-        onclick: () => openExerciseSheet(exId),
-      });
-    }))));
-    put(view, 
-      h('details', { class: 'card' }, h('summary', { style: { cursor: 'pointer', fontWeight: 700 } }, 'Warm-up and cool-down'),
-        h('div', { class: 'eyebrow' }, 'Warm-up'), h('ul', { class: 'checklist' }, WARMUP_GYM.map((x) => h('li', null, x))),
-        h('div', { class: 'eyebrow' }, 'Cool-down'), h('ul', { class: 'checklist' }, COOLDOWN_GYM.map((x) => h('li', null, x)))),
-      h('button', { class: 'btn iron lg block', onclick: () => startGym(t) }, icon(ICONS.play, 20), 'Start this workout'));
-  }
-  if (isCustom) {
-    put(view, h('button', {
-      class: 'btn ghost', onclick: async () => {
-        const ok = await confirmDialog({ title: 'Delete this workout?', message: 'Logged sessions stay in your history.', confirm: 'Delete', danger: true });
-        if (!ok) return;
-        store.update('custom', (c) => { c.templates = c.templates.filter((x) => x.id !== id); return c; });
-        store.update('schedule', (s) => { if (s) s.days = s.days.map((d) => (d === `custom:${id}` ? 'rest' : d)); return s; });
-        back();
-      },
-    }, icon(ICONS.trash, 18), 'Delete workout'));
-  }
-  return view;
-});
 
 // ---------------- builder ----------------
 

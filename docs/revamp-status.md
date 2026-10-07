@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** Phase 0 (swipe-back router, glass sheets, browser tests).
-- **Next up:** checkpoint 1.2.
+- **Next up:** checkpoint 1.3.
 
 ## Checkpoints
 
@@ -50,7 +50,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - The Learn tab merges Library, Learn and Tools.
   - Settings opens from a gear on Today.
   - The More and Log tabs are gone. History is reachable from Progress.
-- [ ] **1.2 One exercise sheet and the Workout page.**
+- [x] **1.2 One exercise sheet and the Workout page.**
   - Exercises, strokes and drills always open in the same sheet; the exercise and drill pages are retired.
   - The Workout page replaces `template`: a hero, rows with thumbnails and a sticky Start button.
 - [ ] **1.3 Today redesign.**
@@ -101,3 +101,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: 0.2 done. `js/router.js` keeps per-tab stacks in step with history (`{ ll: depth }` entries); tab switches unwind with `history.go(-depth)`. Transitions are view transitions keyed by `html[data-vt]`. Finishing a session now *replaces* the live screen with its summary. 6 e2e flows pass.
 - 2026-10-07: 0.3 done. `sheet()` in `js/ui.js` keeps its signature and now returns `{ close, panel, body }`. It drags to dismiss (grabber/header, or content at scroll top), animates out, closes the top sheet on Escape and returns focus. Settings → Appearance has Reduce motion and Reduce transparency (`settings.reduceMotion` / `reduceTransparency`, `html.reduce-*` classes). 7 e2e flows pass.
 - 2026-10-07: Phase 0 merged (#3). 1.1 done: tabs are Today · Plan · Progress · Learn (`js/views/learn.js`, `tools.js`, `settings.js`; `more.js` deleted). Exercises and drills open as sheets everywhere. History is the old Log page, pushed from Progress. The resume pill floats above the tab bar on every tab.
+- 2026-10-07: 1.2 done. `js/views/workout.js` (route `workout`, replaces `template`; exports `workoutSummary` for Today cards). `openExerciseSheet(id, { item, suggestion })` and `openDrillSheet(id, { target })` in `library.js` show today's target when opened from a workout.

@@ -35,6 +35,7 @@ const SHELL = [
   'js/views/onboarding.js',
   'js/views/today.js',
   'js/views/plan.js',
+  'js/views/workout.js',
   'js/views/history.js',
   'js/views/progress.js',
   'js/views/learn.js',

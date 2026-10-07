@@ -3,6 +3,7 @@
 import './views/onboarding.js';
 import './views/today.js';
 import './views/plan.js';
+import './views/workout.js';
 import './views/history.js';
 import './views/progress.js';
 import './views/learn.js';

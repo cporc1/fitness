@@ -1,7 +1,18 @@
-# Lift & Lap revamp plan: navigation, analytics, polish, Apple Health
+# Lift & Lap revamp plan: navigation, analytics, polish
 
-Status: **proposed, waiting for review**. Nothing in the app has changed yet.
+Status: **approved with changes on October 7, 2026, and being built.** Progress, checkpoints and how to resume: [`docs/revamp-status.md`](revamp-status.md).
 This is the build spec: each phase can be handed to whichever model executes it, and ships as its own pull request.
+
+## 0. Decisions after review (these override anything below)
+
+1. **Tabs:** Today · Plan · Progress · Learn.
+2. **Progress switch:** **Total · Workout · Swim**. "Workout" means gym sessions. Other screens keep saying "Gym".
+3. **Live workout:** List stays the default. Focus mode (one exercise at a time) is a toggle in the workout's top bar. Settings → Workout → "Start workouts in" chooses List or Focus, default List.
+4. **Progress ranges:** **1 week** (one bar per day), **8 weeks**, **12 weeks** (default) and **6 months** (one bar per week). This replaces W / M / 3M / 6M / Y.
+5. **Apple Health: dropped.** The user records activity with an Apple Watch, and the app tracks the specifics (sets, weights, swim sets). No Shortcuts bridge, no "Send to Apple Health" button and no Settings → Apple Health. Section 9 stays as a reference for later.
+6. **No mockup.** Build directly.
+7. **Phase order:** 0 Groundwork → 1 Navigation and Today → 2 Progress → 3 Live sessions → 4 Polish. Progress moved ahead of live sessions.
+8. **Sheets:** they size to their content, up to 92% of the screen, with drag-to-dismiss. This replaces medium and large detents. The card-stack scale effect behind a sheet moves to Phase 4.
 
 ---
 
@@ -26,7 +37,6 @@ Observed in the current build (v2):
 - Each screen has one job and shows the summary first, with details on tap.
 - A Progress tab with a **Total / Gym / Swim** switch and time ranges, where every number and chart updates together.
 - A premium feel: frosted glass chrome, fluid spring motion, signature moments for completing sets, swims and workouts.
-- Save workouts to **Apple Health**.
 
 **Non-goals**
 - No framework rewrite: stay with plain ES modules, no build step, hosted on GitHub Pages.
@@ -45,7 +55,7 @@ Observed in the current build (v2):
 | SVG refraction in `backdrop-filter` (`url(#filter)`) | Chromium only; Safari renders nothing | True Liquid Glass lensing is **not possible** on iPhone web. Use frosted glass with specular highlights. |
 | Haptics from web | Only via the `<input switch>` hack, iOS 17.4–26.4; patched in iOS 26.5 | Skip it. Don't build on it. |
 | Edge-swipe back in Home Screen apps | iOS supports back and forward swipe through history entries | Use the History API so swipe-back works for free. Skip our own animation when `popstate.hasUAVisualTransition` is true. |
-| Apple Health | No web API. Native apps only. | Use an Apple Shortcuts bridge (section 9) |
+| Apple Health | No web API. Native apps only. | Out of scope (decision 5). Section 9 keeps the research. |
 | Performance | Each `backdrop-filter` layer is expensive on iOS | At most **3** live blur layers at once (tab bar, top bar, one sheet). Content cards use "faux glass" with no blur. |
 
 Accessibility:
@@ -61,7 +71,7 @@ Accessibility:
 | --- | --- | --- |
 | **Today** | What's on today and this week, with a 1-tap start | Today, and the day page |
 | **Plan** | My week, my program, my workouts | Plan (slimmed), the template page |
-| **Progress** | How am I doing? Total / Gym / Swim × W / M / 3M / 6M / Y, plus history | Progress and Log |
+| **Progress** | How am I doing? Total / Workout / Swim × 1 week / 8 weeks / 12 weeks / 6 months, plus history | Progress and Log |
 | **Learn** | Exercises, machines, strokes, drills, guides and tools | Library, Learn and Tools (out of More) |
 
 **Settings** is the gear icon in the Today top bar, and More goes away. Program settings live in Plan → Program only, so nothing is duplicated in two places.
@@ -88,7 +98,7 @@ Accessibility:
 | `body-log`, `habits` | Shown only when Body & habits is on. Pushed from Settings. |
 | `more` | **removed** |
 | `learn`, `library`, `exercise`, `drill`, `guide`, `tools` | `learn` (tab root) with sections. Exercise, stroke and drill open as **sheets**; `guide` and `tools` are pushed pages. |
-| `settings`, `data`, `install` | `settings` page (pushed from the Today gear), with `data`, `install` and (Phase 5) `health` as sub-pages |
+| `settings`, `data`, `install` | `settings` page (pushed from the Today gear), with `data` and `install` as sub-pages |
 | `session`, `swim-session`, `edit-session`, `edit-swim`, `onboarding` | Unchanged names. Full-screen. |
 | (new) | `celebration`: full-screen, shown after Finish (6.6) |
 
@@ -266,7 +276,7 @@ These spring curves were computed from real spring physics.
 - **Opened from a live workout:** it also offers a **Swap exercise** action.
 - **iOS gotcha:** remove the transform from the sheet once it has finished opening (`transform: none`). Otherwise the YouTube iframe can misplace its touch area.
 
-### 6.4 Live workout: Focus mode (new default) and List mode
+### 6.4 Live workout: List mode (default) and Focus mode (toggle)
 
 ```
 ┌────────────────────────────────────┐
@@ -294,7 +304,7 @@ These spring curves were computed from real spring physics.
   - After the last set of an exercise, the rest pill says "Next: Chest Press".
   - When the rest ends, or when Next is tapped, the pager slides to the next exercise.
   - The user can swipe to any exercise at any time.
-- **List mode:** today's card list, kept for overview and reordering. Settings → Workout sets the default mode, Focus or List.
+- **List mode (default):** today's card list, kept for overview and reordering, with the same steppers and rest pill. The ☰ / Focus button in the top bar switches modes. Settings → Workout → "Start workouts in" sets the starting mode, List by default.
 - **Finish:** goes to the celebration (6.6).
 
 ### 6.5 Live swim
@@ -314,7 +324,7 @@ These spring curves were computed from real spring physics.
   🏅 Leg Press: heaviest ever (110 lb)        (medal icon, no emoji in UI)
   How did it feel?  [Easy] [Moderate] [Hard] [Max]
   Notes (optional, collapsed)
-  [ Save ]        [ Send to Apple Health ]    (Phase 5)
+  [ Save ]
 ```
 
 Swims show distance, time and pace per 100, plus any records.
@@ -339,8 +349,8 @@ Program
 
 ```
 Progress
-[  Total  |  Gym  |  Swim  ]        glass segmented control; sliding pill
-[ W  M  3M  6M  Y ]                 range chips
+[  Total  |  Workout  |  Swim  ]    glass segmented control; sliding pill
+[ 1 week  8 weeks  12 weeks  6 months ]   range chips
 ┌───────────────┬───────────────┐
 │ Workouts  9   │ Active time   │   KPI tiles (count up) with "vs previous period"
 │ ↑2 vs last M  │ 6 h 40 m      │
@@ -357,17 +367,16 @@ Recent ─ last 5 sessions (filtered by mode)        See all history ›
 
 | Range | Span | One bar per |
 | --- | --- | --- |
-| W | last 7 days | day |
-| M | last 30 days | day |
-| 3M | last 13 weeks | week |
-| 6M | last 26 weeks | week |
-| Y | last 12 months | month |
+| 1 week | last 7 days | day |
+| 8 weeks | last 8 weeks | week |
+| 12 weeks (default) | last 12 weeks | week |
+| 6 months | last 26 weeks | week |
 
 Each KPI compares against the previous period of the same length.
 
 **Content by mode:**
 
-| | Total | Gym | Swim |
+| | Total | Workout | Swim |
 | --- | --- | --- | --- |
 | KPI tiles | Workouts, Active time, Week streak, Swim distance | Workouts, Volume lifted, Sets, PRs | Swims, Distance, Time in water, Avg pace per 100 |
 | Main chart | Sessions per bucket, **stacked** gym (amber) + swim (blue), with a legend | Volume per bucket | Distance per bucket |
@@ -399,11 +408,10 @@ The sections, in order:
 2. **Pool.**
 3. **Workout:** rest times, sound, keep screen awake, default live view (Focus or List).
 4. **Appearance:** theme, Reduce motion (default: follow the system), Reduce transparency.
-5. **Apple Health:** a setup guide and a "Test" button (Phase 5).
-6. **Body & daily habits:** a toggle. The Body log and Habits rows show when it's on.
-7. **Backup & data.**
-8. **Install on iPhone.**
-9. **About.**
+5. **Body & daily habits:** a toggle. The Body log and Habits rows show when it's on.
+6. **Backup & data.**
+7. **Install on iPhone.**
+8. **About.**
 
 ## 7. Architecture changes
 
@@ -451,10 +459,8 @@ The sections, in order:
 - Add mount animations driven by `motion.js`, and make them respect Reduce motion.
 
 ### 7.6 Data model (all fields optional and backwards compatible)
-- `settings.sessionView`: `'focus' | 'list'`, default `'focus'`.
+- `settings.sessionView`: `'list' | 'focus'`, default `'list'`.
 - `settings.reduceMotion` and `settings.reduceTransparency`: `'system' | true | false`.
-- `settings.health`: `{ enabled, shortcutName, bodyKg }`.
-- `session.health`: `{ sentAt }`.
 
 ### 7.7 Housekeeping per phase
 - Bump `VERSION` in `sw.js` and add every new file to `SHELL`. A test enforces this.
@@ -476,10 +482,9 @@ Each phase ships on its own, so the live app improves step by step.
 | --- | --- | --- |
 | 0. Groundwork | M | Router with history, view transitions and swipe-back; new sheet with detents, drag and card-stack; motion and glass tokens; e2e suite in the repo. No layout changes yet. |
 | 1. Navigation and Today | L | 4 tabs and the glass tab bar; Settings behind the gear; Learn tab; Today redesign; Workout page; unified exercise sheet; Plan restructure; old routes retired |
-| 2. Live sessions | L | Focus mode with pager, steppers and rest pill; List-mode toggle; swim simplification; celebration screen |
-| 3. Progress | M | Total/Gym/Swim × W/M/3M/6M/Y; KPIs with comparison; animated charts; History page |
-| 4. Polish | M | Ambient background, caustics, sheen, tickers, collapsing titles, black-translucent status bar, accessibility, performance and dark-mode pass |
-| 5. Apple Health | S | Shortcut bridge, Settings guide, "Send to Apple Health" on the celebration screen |
+| 2. Progress | M | Total/Workout/Swim × 1 week/8 weeks/12 weeks/6 months; KPIs with comparison; animated charts; History page |
+| 3. Live sessions | L | Steppers and rest pill; optional Focus mode toggle (List stays default); swim simplification; celebration screen |
+| 4. Polish | M | Ambient background, caustics, sheen, tickers, collapsing titles, black-translucent status bar, card-stack sheets, accessibility, performance and dark-mode pass |
 
 ### Acceptance checks (automate in `tests/e2e` wherever possible)
 
@@ -497,18 +502,18 @@ Each phase ships on its own, so the live app improves step by step.
 - On an iPhone 13, a single-session day fits without scrolling.
 - Tapping the active tab pops to its root.
 
-**Phase 2**
-- A full gym workout can be completed with steppers only, no keyboard.
-- Data survives reloading in the middle of a set.
-- Switching to List mode shows the same data.
-- The celebration shows PRs.
-- The swim focus card plus the collapsed set list works through a whole session.
-
-**Phase 3**
+**Phase 2 (Progress)**
 - Every mode × range combination renders with no console errors.
 - KPI totals match the sum of the chart buckets (unit test).
 - Comparisons are correct across a month boundary (unit test).
 - History lists everything.
+
+**Phase 3 (Live sessions)**
+- A full gym workout can be completed with steppers only, no keyboard.
+- Data survives reloading in the middle of a set.
+- Switching between List and Focus shows the same data.
+- The celebration shows PRs.
+- The swim focus card plus the collapsed set list works through a whole session.
 
 **Phase 4**
 - At most 3 `backdrop-filter` elements in the DOM at any time (e2e check).
@@ -516,19 +521,14 @@ Each phase ships on its own, so the live app improves step by step.
 - Nothing animates with Reduce motion on.
 - Caustics pause when off-screen.
 
-**Phase 5**
-- The payload unit test passes: yards become meters, and kcal is computed only when body weight is set.
-- The URL is encoded correctly.
-- Sessions are marked as sent, and a second send asks for confirmation.
-
 ### Guidance for the executing model
 - Read this file and the existing code first. Keep the house style: `h()`, `put()` and `fill()` helpers, tokens in `css/app.css`, and copy in plain sentence case.
 - Never re-animate on data refresh (7.1, the `entering` flag).
 - Never let more than 3 blur layers exist at once. Cards use `.card-glass`.
 - Keep every existing feature reachable. The route map in 4.3 is the checklist.
-- Phases 0 and 2 carry the most risk (navigation engine and live session). Review them most carefully.
+- Phases 0 and 3 carry the most risk (navigation engine and live session). Review them most carefully.
 
-## 9. Apple Health
+## 9. Apple Health (reference only: dropped in decision 5)
 
 ### 9.1 What's possible
 - **Direct access: no.** Apple Health (HealthKit) is only available to native iPhone apps. There is no web API.
@@ -554,7 +554,7 @@ Each phase ships on its own, so the live app improves step by step.
 4. **Weight.** Log it directly in the Health app, or with a smart scale. The guide also shows an optional 2-action "Log Weight" shortcut for the Home Screen (Ask for Number → Log Health Sample: Weight). The app itself stays focused on training.
 5. **Apple Watch owners.** Starting swims on the Watch gives automatic lap counting and logs to Health natively. The guide should say: if you record a workout on the Watch, don't also send it from Lift & Lap. Otherwise Health shows it twice.
 
-### 9.3 Things to verify on a real iPhone during Phase 5
+### 9.3 Things to verify on a real iPhone if this is ever built
 These can't be tested from the build machine:
 - The exact names in Log Workout's Type list (*Swimming*, *Traditional Strength Training*).
 - Whether Calories is required.
@@ -571,7 +571,7 @@ These can't be tested from the build machine:
   - An Apple Developer membership ($99/year), or reinstalling every 7 days with a free account.
   - A separate distribution path: TestFlight or the App Store.
 
-## 10. Open questions for review
+## 10. Open questions for review (answered: see section 0)
 
 1. Tab names: **Today · Plan · Progress · Learn**?
 2. Progress switch labels: **Total · Gym · Swim**, or your wording **Total · Workout · Swim**?

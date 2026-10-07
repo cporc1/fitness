@@ -87,8 +87,14 @@ function cleanGymSession(session) {
       suggestion: ex.suggestion ? { kind: ex.suggestion.kind, weight: ex.suggestion.weight ?? null } : null,
     }))
     .filter((ex) => ex.sets.length);
-  const { view, focusIndex, ...rest } = session;
-  return { ...rest, exercises };
+  // Warm-up and cool-down: just which items were done.
+  const { view, focusIndex, warmup, cooldown, ...rest } = session;
+  const brief = (items) => items.map(({ ex, done }) => ({ ex, done: !!done }));
+  return {
+    ...rest, exercises,
+    ...(warmup?.length ? { warmup: brief(warmup) } : {}),
+    ...(cooldown?.length ? { cooldown: brief(cooldown) } : {}),
+  };
 }
 
 /**

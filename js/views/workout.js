@@ -6,13 +6,13 @@ import * as store from '../store.js';
 import { h, icon, ICONS, fmtClock, put } from '../util.js';
 import { go, back, registerRoute } from '../app.js';
 import { sharedHero } from '../router.js';
-import { PHASES, WARMUP_GYM, COOLDOWN_GYM } from '../data/plans.js';
+import { PHASES, RAMP_UP_NOTE } from '../data/plans.js';
 import { SWIM_LEVELS, expandForPool, workoutDistance, guideForItem } from '../data/swim.js';
 import { getExercise } from '../data/exercises.js';
-import { templateById, suggest } from '../program.js';
+import { templateById, suggest, warmupFor, cooldownFor, routineMinutes, routineTarget } from '../program.js';
 import { startGym, startSwim } from '../actions.js';
-import { topbar, listItem, sheet, confirmDialog, lanes } from '../ui.js';
-import { exThumb, openExerciseSheet, openDrillSheet, targetText } from './library.js';
+import { topbar, listItem, confirmDialog, lanes } from '../ui.js';
+import { exThumb, openExerciseSheet, openDrillSheet, targetText, routineRows } from './library.js';
 import { describeItem } from './session-swim.js';
 
 const EQUIPMENT_WORD = { Machine: 'machines', Dumbbell: 'dumbbells', Barbell: 'barbell', Cable: 'cables', Bodyweight: 'bodyweight', 'Cardio machine': 'cardio' };
@@ -33,13 +33,30 @@ export function workoutSummary(t, state) {
     const exId = swaps[item.ex] || item.ex;
     return { item, exId, def: getExercise(exId), swapped: !!swaps[item.ex], sugg: suggest(exId, item, state.sessions, unit) };
   });
-  const minutes = Math.round((t.exercises || []).reduce((m, e) => m + e.sets * (1 + (e.rest || 90) / 60), 0) + 8);
+  const warmup = warmupFor(t);
+  const cooldown = cooldownFor(t);
+  const minutes = Math.round((t.exercises || []).reduce((m, e) => m + e.sets * (1 + (e.rest || 90) / 60), 0)
+    + routineMinutes(warmup) + routineMinutes(cooldown));
   const equipment = [...new Set(items.map((x) => x.def?.equipment).filter(Boolean))].map((e) => EQUIPMENT_WORD[e] || e.toLowerCase());
-  return { kind: 'gym', items, minutes, ups: items.filter((x) => x.sugg.kind === 'up').length, equipment };
+  return { kind: 'gym', items, minutes, ups: items.filter((x) => x.sugg.kind === 'up').length, equipment, warmup, cooldown };
 }
 
-function checklistSheet(title, items) {
-  sheet(title, h('ul', { class: 'checklist' }, items.map((x) => h('li', null, x))));
+function routineSection(title, items, { label, sub, className, foot }) {
+  const rows = routineRows(items, (it) => {
+    const def = getExercise(it.ex);
+    return listItem({
+      title: def?.name || it.ex,
+      sub: routineTarget(it),
+      leading: exThumb(it.ex) || h('span', { class: 'sr-icon other' }, icon(ICONS.timer)),
+      onclick: () => openExerciseSheet(it.ex, { routine: { label, item: it } }),
+    });
+  });
+  return h('section', { class: `section ${className}` },
+    h('div', { class: 'group-head' },
+      h('div', { class: 'eyebrow group-title' }, title),
+      sub ? h('span', { class: 'xs muted' }, sub) : null),
+    h('div', { class: 'card flush session-row' }, h('div', { class: 'list' }, rows)),
+    foot ? h('p', { class: 'small muted', style: { margin: '0 4px' } }, foot) : null);
 }
 
 function eyebrowFor(t, state) {
@@ -96,19 +113,28 @@ registerRoute('workout', ({ id }, state) => {
         })))));
     }
   } else {
-    const rows = [
-      listItem({ title: 'Warm-up', sub: '5–8 min · easy cardio and mobility', leading: h('span', { class: 'sr-icon other' }, icon(ICONS.timer)), onclick: () => checklistSheet('Warm-up', WARMUP_GYM) }),
-      ...sum.items.map(({ item, exId, def, swapped, sugg }) => listItem({
-        title: def?.name || exId,
-        sub: `${targetText(item, def)}${item.rest ? ` · rest ${fmtClock(item.rest)}` : ''}${swapped ? ' · swapped' : ''}`,
-        leading: exThumb(exId) || h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),
-        trailing: sugg.kind === 'up' ? h('span', { class: 'chip good' }, icon(['M12 19V5', 'M5 12l7-7 7 7'], 12), 'Add weight') : undefined,
-        onclick: () => openExerciseSheet(exId, { item, suggestion: sugg }),
-      })),
-      listItem({ title: 'Cool-down', sub: '3–5 min · easy stretches', leading: h('span', { class: 'sr-icon other' }, icon(ICONS.rest)), onclick: () => checklistSheet('Cool-down', COOLDOWN_GYM) }),
-    ];
-    put(view, h('div', { class: 'card flush session-row' }, h('div', { class: 'list' }, rows)));
-    if (sum.ups) put(view, h('p', { class: 'small muted' }, `You hit the top of the range last time on ${sum.ups === 1 ? 'one exercise' : `${sum.ups} exercises`}, so the app will suggest a little more weight.`));
+    const rows = sum.items.map(({ item, exId, def, swapped, sugg }) => listItem({
+      title: def?.name || exId,
+      sub: `${targetText(item, def)}${item.rest ? ` · rest ${fmtClock(item.rest)}` : ''}${swapped ? ' · swapped' : ''}`,
+      leading: exThumb(exId) || h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),
+      trailing: sugg.kind === 'up' ? h('span', { class: 'chip good' }, icon(['M12 19V5', 'M5 12l7-7 7 7'], 12), 'Add weight') : undefined,
+      onclick: () => openExerciseSheet(exId, { item, suggestion: sugg }),
+    }));
+    put(view,
+      routineSection('Warm-up', sum.warmup, {
+        label: 'In this warm-up', sub: `~${routineMinutes(sum.warmup)} min · stretch, then get moving`, className: 'wk-warmup', foot: RAMP_UP_NOTE,
+      }),
+      h('section', { class: 'section wk-exercises' },
+        h('div', { class: 'group-head' },
+          h('div', { class: 'eyebrow group-title' }, 'Exercises'),
+          h('span', { class: 'xs muted' }, `${sum.items.length} ${sum.items.length === 1 ? 'exercise' : 'exercises'}`)),
+        sum.items.length
+          ? h('div', { class: 'card flush session-row' }, h('div', { class: 'list' }, rows))
+          : h('div', { class: 'chart-empty' }, 'No exercises yet.'),
+        sum.ups ? h('p', { class: 'small muted', style: { margin: '0 4px' } }, `You hit the top of the range last time on ${sum.ups === 1 ? 'one exercise' : `${sum.ups} exercises`}, so the app will suggest a little more weight.`) : null),
+      routineSection('Cool-down', sum.cooldown, {
+        label: 'In this cool-down', sub: `~${routineMinutes(sum.cooldown)} min · longer holds build flexibility`, className: 'wk-cooldown',
+      }));
   }
 
   if (isCustom) {

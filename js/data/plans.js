@@ -186,17 +186,70 @@ export const GYM_TEMPLATES = [
   },
 ];
 
-export const WARMUP_GYM = [
-  '5 minutes easy cardio (bike, rower or incline walk)',
-  '10 leg swings each side, 10 arm circles each way',
-  '10 bodyweight squats and 10 hip hinges',
-  'Warm-up sets before each barbell lift, and before your first lift: empty bar or light × 8–10, about 50% × 8, then 75% × 4',
-];
+// Warm-up and cool-down, one set for each kind of day. The warm-up starts
+// with stretches (gentle movement and short holds, which loosen you up
+// without sapping strength), then a few moves to raise your temperature.
+// The cool-down is longer holds: that is where flexibility improves.
+// Item: { ex, reps } | { ex, sec } | { ex, min }, plus part: 'stretch' | 'move'
+// in the warm-up. Reps and seconds are per side for one-sided stretches;
+// `say` overrides the target text.
+const EASY_CARDIO = 'Easy pace: you could chat. Any cardio machine works.';
 
-export const COOLDOWN_GYM = [
-  '3–5 minutes easy walking',
-  'Optional stretches: hip flexors, hamstrings, chest doorway stretch (30 s each)',
-];
+export const WARMUPS = {
+  full: [
+    { ex: 'cat-cow', part: 'stretch', reps: 8 },
+    { ex: 'worlds-greatest-stretch', part: 'stretch', reps: 3 },
+    { ex: 'hip-flexor-stretch', part: 'stretch', sec: 30 },
+    { ex: 'chest-opener', part: 'stretch', reps: 10 },
+    { ex: 'bike', part: 'move', min: 4, note: EASY_CARDIO },
+    { ex: 'bodyweight-squat', part: 'move', reps: 10 },
+    { ex: 'incline-push-up', part: 'move', reps: 8 },
+  ],
+  upper: [
+    { ex: 'cat-cow', part: 'stretch', reps: 8 },
+    { ex: 'arm-circles', part: 'stretch', reps: 10, say: '10 each way' },
+    { ex: 'chest-opener', part: 'stretch', reps: 10 },
+    { ex: 'childs-pose', part: 'stretch', sec: 30 },
+    { ex: 'rower', part: 'move', min: 4, note: EASY_CARDIO },
+    { ex: 'incline-push-up', part: 'move', reps: 8 },
+  ],
+  lower: [
+    { ex: 'cat-cow', part: 'stretch', reps: 8 },
+    { ex: 'worlds-greatest-stretch', part: 'stretch', reps: 3 },
+    { ex: 'hip-flexor-stretch', part: 'stretch', sec: 30 },
+    { ex: 'leg-swing', part: 'stretch', reps: 10 },
+    { ex: 'bike', part: 'move', min: 4, note: EASY_CARDIO },
+    { ex: 'bodyweight-squat', part: 'move', reps: 10 },
+    { ex: 'glute-bridge', part: 'move', reps: 10 },
+  ],
+};
+
+export const COOLDOWNS = {
+  full: [
+    { ex: 'hamstring-stretch', sec: 45 },
+    { ex: 'hip-flexor-stretch', sec: 45 },
+    { ex: 'figure-four-stretch', sec: 45 },
+    { ex: 'chest-stretch', sec: 30 },
+    { ex: 'childs-pose', sec: 45 },
+  ],
+  upper: [
+    { ex: 'chest-stretch', sec: 45 },
+    { ex: 'shoulder-stretch', sec: 30 },
+    { ex: 'triceps-stretch', sec: 30 },
+    { ex: 'lat-stretch', sec: 30 },
+    { ex: 'childs-pose', sec: 45 },
+  ],
+  lower: [
+    { ex: 'hamstring-stretch', sec: 45 },
+    { ex: 'quad-stretch', sec: 45 },
+    { ex: 'figure-four-stretch', sec: 45 },
+    { ex: 'butterfly-stretch', sec: 45 },
+    { ex: 'calf-stretch', sec: 30 },
+  ],
+};
+
+/** Shown under the warm-up: the lifts themselves still need lighter sets first. */
+export const RAMP_UP_NOTE = 'Before each barbell lift, and your first lift of the day, do 1–2 lighter sets: about half your working weight × 8, then three-quarters × 4.';
 
 export function phaseForWeek(week) {
   return PHASES.find((p) => week >= p.weeks[0] && week <= p.weeks[1]) || PHASES[PHASES.length - 1];

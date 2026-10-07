@@ -181,6 +181,18 @@ export function miniClock() {
   return { el, update };
 }
 
+/** A large ring that empties as a countdown runs. update(remaining, total). */
+export function countdownRing(className = '') {
+  const arc = s('path', { class: 'arc', d: '' });
+  const el = s('svg', { class: `count-ring ${className}`.trim(), viewBox: '0 0 200 200', 'aria-hidden': 'true' },
+    s('circle', { class: 'face', cx: C, cy: C, r: 88 }), arc);
+  function update(rem, total) {
+    const frac = total ? Math.max(0, Math.min(1, rem / total)) : 0;
+    arc.setAttribute('d', frac > 0 ? arcPath(0, frac * 360, 88) : '');
+  }
+  return { el, update };
+}
+
 /** The rest bar pinned to the bottom during a session. */
 export function restBar({ onOpen } = {}) {
   const clock = miniClock();

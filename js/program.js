@@ -2,7 +2,7 @@
 // comes next, and the weight to try for each exercise (double progression).
 
 import { daysBetween, weekdayIndex, round, uid, todayISO, addDays } from './util.js';
-import { PHASES, phaseForWeek, gymTemplatesForPhase, getGymTemplate } from './data/plans.js';
+import { PHASES, phaseForWeek, gymTemplatesForPhase, getGymTemplate, WARMUPS, COOLDOWNS } from './data/plans.js';
 import { getSwimWorkout, swimTemplateKeys, expandForPool } from './data/swim.js';
 import { getExercise } from './data/exercises.js';
 import { convertWeight, workingSets } from './stats.js';
@@ -299,6 +299,48 @@ export function exerciseEntry(exId, target, sessions, unit) {
   };
 }
 
+// ---------------- warm-up and cool-down ----------------
+
+const UPPER_GROUPS = ['Chest', 'Back', 'Shoulders', 'Arms'];
+
+/** Which warm-up and cool-down fit a workout: 'full', 'upper' or 'lower'. */
+export function routineKind(template) {
+  if (template?.split === 'upper-lower') return template.slot === 'U' ? 'upper' : 'lower';
+  if (template?.split) return 'full';
+  // Your own workouts: judge by what's in them.
+  const groups = (template?.exercises || []).map((e) => getExercise(e.ex)?.group);
+  const legs = groups.includes('Legs');
+  const upper = groups.some((g) => UPPER_GROUPS.includes(g));
+  if (legs && !upper) return 'lower';
+  if (upper && !legs) return 'upper';
+  return 'full';
+}
+
+export function warmupFor(template) { return WARMUPS[routineKind(template)].map((it) => ({ ...it })); }
+export function cooldownFor(template) { return COOLDOWNS[routineKind(template)].map((it) => ({ ...it })); }
+
+/** "8 reps", "3 per side", "Hold 30 s per side", "4 min" for a warm-up or cool-down item. */
+export function routineTarget(item) {
+  if (item.say) return item.say;
+  const side = getExercise(item.ex)?.unilateral;
+  if (item.min) return `${item.min} min`;
+  if (item.sec) return `Hold ${item.sec} s${side ? ' per side' : ''}`;
+  return `${item.reps} ${side ? 'per side' : 'reps'}`;
+}
+
+/** How long an item takes, in seconds: the hold or reps, both sides, plus getting into position. */
+export function routineSeconds(item) {
+  const sides = getExercise(item.ex)?.unilateral ? 2 : 1;
+  if (item.min) return item.min * 60 + 15;
+  if (item.sec) return item.sec * sides + 10 * sides;
+  const perRep = item.ex === 'worlds-greatest-stretch' ? 12 : 4;
+  return (item.reps || 0) * perRep * sides + 10;
+}
+
+export function routineMinutes(items) {
+  return Math.max(1, Math.round((items || []).reduce((n, it) => n + routineSeconds(it), 0) / 60));
+}
+
 export function buildGymSession(template, state, opts = {}) {
   const { profile, sessions, swaps } = state;
   const unit = profile?.units || 'lb';
@@ -312,6 +354,8 @@ export function buildGymSession(template, state, opts = {}) {
     date, startedAt: new Date().toISOString(), endedAt: null, durationSec: 0,
     unit, week: programWeek(profile, date), phase: template.phase || null,
     exercises, notes: '', rpe: null,
+    warmup: warmupFor(template).map((it) => ({ ...it, done: false })),
+    cooldown: cooldownFor(template).map((it) => ({ ...it, done: false })),
   };
 }
 

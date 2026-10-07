@@ -9,9 +9,10 @@ import {
 import {
   programWeek, currentPhase, defaultSchedule, nextGymTemplate, nextSwimWorkout, suggest,
   buildGymSession, buildSwimSession, computeSwimDistance, planForDay, stepWeight,
+  routineKind, routineTarget, routineMinutes,
 } from '../js/program.js';
 import { expandForPool, workoutDistance, SWIM_WORKOUTS, getDrill } from '../js/data/swim.js';
-import { GYM_TEMPLATES } from '../js/data/plans.js';
+import { GYM_TEMPLATES, WARMUPS, COOLDOWNS, getGymTemplate } from '../js/data/plans.js';
 import { EXERCISES, getExercise } from '../js/data/exercises.js';
 import { addDays, weekStart, parseClock, fmtClock } from '../js/util.js';
 
@@ -362,4 +363,43 @@ test('stepper steps: real dumbbell sizes, one pin on machines, never below zero'
   assert.equal(stepWeight('leg-press', 100, 'lb', 1), 110);
   assert.equal(stepWeight('leg-press', 100, 'lb', -1), 90);
   assert.equal(stepWeight('leg-press', 5, 'lb', -1), 0);
+});
+
+test('warm-up: stretches first, then moves; cool-down: longer holds; every item has photos', async () => {
+  const { FRAMES } = await import('../js/data/media.js');
+  for (const [kind, items] of Object.entries(WARMUPS)) {
+    const parts = items.map((it) => it.part);
+    assert.equal(parts[0], 'stretch', `${kind} starts with a stretch`);
+    assert.ok(parts.lastIndexOf('stretch') < parts.indexOf('move'), `${kind}: all stretches before the moves`);
+    for (const it of items) if (it.sec) assert.ok(it.sec <= 30, `${kind}: warm-up holds stay short (${it.ex})`);
+  }
+  for (const items of Object.values(COOLDOWNS)) for (const it of items) assert.ok(it.sec >= 30, `cool-down holds are 30 s or more (${it.ex})`);
+  for (const items of [...Object.values(WARMUPS), ...Object.values(COOLDOWNS)]) {
+    for (const it of items) {
+      assert.ok(getExercise(it.ex), `unknown exercise ${it.ex}`);
+      assert.ok(FRAMES[it.ex], `${it.ex} has demo photos`);
+      assert.equal([it.reps, it.sec, it.min].filter(Boolean).length, 1, `${it.ex}: one target`);
+    }
+    const mins = routineMinutes(items);
+    assert.ok(mins >= 5 && mins <= 12, `routine takes ${mins} min`);
+  }
+});
+
+test('each workout gets the warm-up for its day', () => {
+  assert.equal(routineKind(getGymTemplate('p1-a')), 'full');
+  assert.equal(routineKind(getGymTemplate('p2-u')), 'upper');
+  assert.equal(routineKind(getGymTemplate('p3-l')), 'lower');
+  assert.equal(routineKind({ exercises: [{ ex: 'leg-press' }, { ex: 'plank' }] }), 'lower');
+  assert.equal(routineKind({ exercises: [{ ex: 'db-curl' }, { ex: 'lat-pulldown' }] }), 'upper');
+  assert.equal(routineKind({ exercises: [] }), 'full');
+  const s = buildGymSession(getGymTemplate('p1-l'), { profile: { units: 'lb', startDate: '2026-10-01' }, sessions: [], swaps: {} });
+  assert.deepEqual(s.warmup.map((it) => it.ex), WARMUPS.lower.map((it) => it.ex));
+  assert.deepEqual(s.cooldown.map((it) => it.ex), COOLDOWNS.lower.map((it) => it.ex));
+  assert.ok([...s.warmup, ...s.cooldown].every((it) => it.done === false));
+  s.warmup[0].done = true;
+  assert.equal(WARMUPS.lower[0].done, undefined, 'sessions get their own copy');
+  assert.equal(routineTarget({ ex: 'hamstring-stretch', sec: 45 }), 'Hold 45 s per side');
+  assert.equal(routineTarget({ ex: 'childs-pose', sec: 45 }), 'Hold 45 s');
+  assert.equal(routineTarget({ ex: 'leg-swing', reps: 10 }), '10 per side');
+  assert.equal(routineTarget({ ex: 'bike', min: 4 }), '4 min');
 });

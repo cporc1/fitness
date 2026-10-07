@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** all phases (0–4), plus fix 5.1.
-- **Next up:** checkpoint 5.2 in the follow-up round below.
+- **Live on `main`:** all phases (0–4), plus fix 5.1. Checkpoint 5.2 is on the working branch.
+- **Next up:** checkpoint 5.3 in the follow-up round below.
 - **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
@@ -103,7 +103,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Bug: a workout finished from Focus mode came back as "in progress" and blocked the swim.
   - Fix: late saves of a session that's no longer active are ignored, and Finish no longer redraws the live screen. On launch, a stuck copy of a saved workout is cleared.
   - Shipped on its own PR.
-- [ ] **5.2 Warm-up and cool-down as real steps.**
+- [x] **5.2 Warm-up and cool-down as real steps.**
   - Warm-up: stretches first (they want more flexibility), then warm-up moves.
   - Cool-down: static stretches.
   - Each item is its own line with a photo and a target (hold time or reps), on the Workout page and in a live workout. In Focus mode each one is a page of its own.
@@ -151,3 +151,17 @@ Start a new Claude Code session on `cporc1/fitness` and say:
     - `updateDots` skips a detached pager.
     - `healActive()` in `app.js` clears a saved workout left behind as active.
   - New e2e flow; SW v7.
+- 2026-10-07: 5.2 done.
+  - New exercises: 16 stretches (new Stretching group in Learn), plus Bodyweight Squat and Incline Push-Up. Photos are from Free Exercise DB.
+  - Routines: `WARMUPS` / `COOLDOWNS` in `plans.js`, one each for full, upper and lower days.
+    - The warm-up is stretches first (gentle movement, holds of 30 s or less), then moves.
+    - The cool-down is 30–45 s holds.
+    - `routineKind()` in `program.js` picks the set; your own workouts are judged by their exercises.
+  - Sessions carry `warmup` / `cooldown` items with `done` flags; a saved workout keeps `{ ex, done }` only.
+  - Workout page: Warm-up · Exercises · Cool-down sections, every item a row with a photo that opens its sheet.
+  - List view: a checkable card at each end.
+  - Focus view:
+    - One page per item, then a Finish page.
+    - Holds get a timer with a 5 s "switch sides" gap; it ticks the item and moves on.
+    - Green dots mark warm-up and cool-down pages.
+  - The celebration and History show "Warm-up 7/7 · Cool-down 5/5". The swim's dry warm-up uses the same rows. SW v8.

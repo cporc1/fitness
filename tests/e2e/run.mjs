@@ -12,7 +12,13 @@ const gymSession = (id, date, tpl, exercises) => ({
 });
 
 const btn = (page, name) => page.getByRole('button', { name }).first();
-const exerciseRow = (page) => page.locator('.list-item', { has: page.locator('.ex-thumb') }).first();
+const exerciseRow = (page) => page.locator('.wk-exercises .list-item', { has: page.locator('.ex-thumb') }).first();
+const activeDoc = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('liftlap:v1:active')));
+/** Swipe the Focus pager straight to a page and wait until it's saved. */
+async function focusTo(page, idx) {
+  await page.evaluate((i) => { const p = document.querySelector('.pager'); p.scrollTo({ left: i * p.clientWidth, behavior: 'instant' }); }, idx);
+  await page.waitForFunction((i) => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex === i, idx, { timeout: 3000 });
+}
 const closeSheet = (page) => page.locator('.sheet').last().getByRole('button', { name: 'Close' }).click();
 async function openSettings(page) {
   await tabTo(page, 'Today');
@@ -116,7 +122,8 @@ test('plan, library, settings', async ({ newPage, open, check, shot }) => {
   check('One workout is marked up next per kind', (await page.locator('.rot-card .chip', { hasText: 'Up next' }).count()) === 2);
   await page.locator('.rot-card', { hasText: 'Upper Body' }).click();
   await page.locator('.wk-hero').waitFor();
-  check('Workout page shows the warm-up and cool-down rows', (await page.locator('.list-item', { hasText: 'Warm-up' }).count()) === 1 && (await page.locator('.list-item', { hasText: 'Cool-down' }).count()) === 1);
+  check('Upper Body gets the upper-body warm-up and cool-down', (await page.locator('.wk-warmup .list-item', { hasText: 'Arm Circles' }).count()) === 1
+    && (await page.locator('.wk-cooldown .list-item', { hasText: 'Overhead Triceps Stretch' }).count()) === 1);
   await exerciseRow(page).click();
   await page.locator('.sheet .find-card').waitFor();
   check('A plan exercise opens its details in a sheet', (await page.locator('.sheet .find-card').count()) === 1);
@@ -498,9 +505,11 @@ test('focus mode: steppers, auto-advance, survives reload, same data as the list
   await page.locator('.ex-card').first().waitFor();
   check('Workouts start in the list view by default', (await page.locator('.pager').count()) === 0);
   await page.getByRole('button', { name: 'One exercise at a time' }).click();
-  await page.locator('.fpage .complete-set').first().waitFor();
-  check('Focus opens on the first exercise', (await page.locator('.pager-dots span.on').count()) === 1 && (await page.evaluate(() => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex)) === 1);
-  const pageEl = page.locator('.fpage').nth(1);
+  await page.locator('.rt-page').first().waitFor();
+  check('Focus starts with the first warm-up step', (await page.locator('.pager-dots span.on').count()) === 1 && (await activeDoc(page)).focusIndex === 0);
+  const W = (await activeDoc(page)).warmup.length;
+  await focusTo(page, W); // past the warm-up, to the first exercise
+  const pageEl = page.locator('.fpage').nth(W);
   const weight = pageEl.locator('.st-input').first();
   await pageEl.getByRole('button', { name: 'More lb' }).click();
   await pageEl.getByRole('button', { name: 'More lb' }).click();
@@ -509,17 +518,17 @@ test('focus mode: steppers, auto-advance, survives reload, same data as the list
   const reps = await pageEl.locator('.st-input').nth(1).inputValue();
   await shot(page, 'focus', false);
   await pageEl.locator('.complete-set').click();
-  check('Completing a set ticks it', (await page.locator('.fpage').nth(1).locator('.fset.done').count()) === 1);
+  check('Completing a set ticks it', (await page.locator('.fpage').nth(W).locator('.fset.done').count()) === 1);
   check('…and starts the rest timer', await page.locator('.rest-bar').isVisible());
-  await page.locator('.fpage').nth(1).locator('.complete-set').click();
-  await page.locator('.fpage').nth(1).locator('.complete-set').click();
-  await page.waitForFunction(() => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex === 2, null, { timeout: 3000 });
+  await page.locator('.fpage').nth(W).locator('.complete-set').click();
+  await page.locator('.fpage').nth(W).locator('.complete-set').click();
+  await page.waitForFunction((n) => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex === n, W + 1, { timeout: 3000 });
   check('After the last set it slides to the next exercise', true);
   await page.reload();
   await page.locator('.resume-pill').click();
   await page.locator('.pager').waitFor();
   await page.waitForFunction(() => document.querySelectorAll('.pager-dots span.on').length === 1);
-  check('Reload keeps Focus mode and the page', (await page.locator('.pager-dots span').nth(2).getAttribute('class')) === 'on');
+  check('Reload keeps Focus mode and the page', await page.locator('.pager-dots span').nth(W + 1).evaluate((el) => el.classList.contains('on')));
   await page.getByRole('button', { name: 'Show all exercises' }).click();
   await page.locator('.ex-card').first().waitFor();
   check('List shows the same three sets done', (await page.locator('.ex-card').first().locator('.set-row.done').count()) === 3);
@@ -532,7 +541,62 @@ test('focus mode: steppers, auto-advance, survives reload, same data as the list
   await open(page2, { profile: PROFILE, schedule: WEEK, settings: { sessionView: 'focus' } });
   await page2.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
   await page2.locator('.pager').waitFor();
-  check('Settings can make Focus the starting view', (await page2.getByRole('button', { name: "I'm warmed up" }).count()) === 1);
+  check('Settings can make Focus the starting view', (await page2.locator('.rt-page.warmup').first().locator('h2').textContent()) === 'Cat-Cow');
+});
+
+test('warm-up and cool-down: photos, stretches first, ticks, hold timer', async ({ newPage, open, check, shot }) => {
+  const page = await newPage();
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Details' }).click();
+  await page.locator('.wk-hero').waitFor();
+  const parts = await page.locator('.group-title').allTextContents();
+  check('Workout page: warm-up, exercises, cool-down', parts.join('|') === 'Warm-up|Exercises|Cool-down', parts.join('|'));
+  check('Stretches come before the warm-up moves', (await page.locator('.wk-warmup .list-sub').allTextContents()).join('|') === 'Stretch|Warm up');
+  const rows = { warm: await page.locator('.wk-warmup .list-item').count(), cool: await page.locator('.wk-cooldown .list-item').count() };
+  check('Each warm-up and cool-down item has its own row and photo', rows.warm === 7 && rows.cool === 5
+    && (await page.locator('.wk-warmup .list-item .ex-thumb').count()) === 7 && (await page.locator('.wk-cooldown .list-item .ex-thumb').count()) === 5, JSON.stringify(rows));
+  await page.locator('.wk-cooldown .list-item').first().click();
+  await page.locator('.sheet .target-card').waitFor();
+  check('A stretch opens its how-to with the hold time', (await page.locator('.sheet .target-card').textContent()).includes('Hold 45 s per side')
+    && (await page.locator('.sheet .demo img').count()) === 2);
+  await closeSheet(page);
+
+  await page.getByRole('button', { name: 'Start workout' }).first().click();
+  await page.locator('.routine-card.warmup').getByRole('button', { name: 'Done: Cat-Cow' }).click();
+  check('Ticking a warm-up item saves it', (await activeDoc(page)).warmup[0].done === true);
+  check('…and counts it', (await page.locator('.routine-card.warmup .rt-head').textContent()).includes('1 of 7'));
+  check('The cool-down card comes after the exercises', await page.evaluate(() => {
+    const ex = document.querySelector('.ex-card');
+    const cool = document.querySelector('.routine-card.cooldown');
+    return !!(ex && cool && (ex.compareDocumentPosition(cool) & Node.DOCUMENT_POSITION_FOLLOWING));
+  }));
+
+  await page.getByRole('button', { name: 'One exercise at a time' }).click();
+  await page.locator('.pager').waitFor();
+  check('Focus picks up at the next warm-up step', (await activeDoc(page)).focusIndex === 1);
+  await page.locator('.fpage').nth(1).getByRole('button', { name: 'Done', exact: true }).click();
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex === 2, null, { timeout: 3000 });
+  check('Done moves on to the next step', true);
+  const holdPage = page.locator('.fpage').nth(2);
+  await holdPage.getByRole('button', { name: 'Start 30 s each side' }).click();
+  await page.clock.fastForward(31_000);
+  await holdPage.locator('.ht-label', { hasText: 'Switch sides' }).waitFor();
+  check('The hold timer says when to switch sides', true);
+  await page.clock.fastForward(6_000);
+  await holdPage.locator('.ht-label', { hasText: 'Second side' }).waitFor();
+  await page.clock.fastForward(31_000);
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('liftlap:v1:active')).warmup[2].done === true, null, { timeout: 3000 });
+  check('…ticks the stretch once both sides are done', true);
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex === 3, null, { timeout: 3000 });
+  check('…and moves on', true);
+  await shot(page, 'warmup-focus', false);
+
+  await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
+  await page.locator('.dialog').getByRole('button', { name: 'Save anyway' }).click();
+  await page.locator('.celebrate').waitFor();
+  check('The celebration counts the warm-up and cool-down', (await page.locator('.routine-chips').textContent()).replace(/\s+/g, ' ').includes('Warm-up 3/7'));
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('liftlap:v1:sessions-2026-10')).items[0]);
+  check('The saved workout keeps a short record of them', saved.warmup.length === 7 && saved.warmup.filter((x) => x.done).length === 3 && !('part' in saved.warmup[0]));
 });
 
 test('finishing with nothing ticked asks first', async ({ newPage, open, check }) => {

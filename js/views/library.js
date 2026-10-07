@@ -8,6 +8,7 @@ import { getDrill } from '../data/swim.js';
 import { framesFor } from '../data/media.js';
 import { demoFrames, demoVideo } from '../media.js';
 import { exerciseHistory, exerciseRecords } from '../stats.js';
+import { routineTarget } from '../program.js';
 import { listItem, sheet, input, field, select, toast, confirmDialog } from '../ui.js';
 
 const TYPE_LABEL = {
@@ -61,11 +62,14 @@ function historyBlock(exId, def, sessions, unit) {
         h('div', { class: 'li-sub num' }, x.sets.map((st) => fmtSet(st, def.type, unit)).join(' · '))))))));
 }
 
+const STRETCH_TIP = 'Ease into a mild stretch, never pain, and breathe slowly. No bouncing.';
+
 /**
  * Everything about one exercise, most useful first: the moving photos, how to
  * find the machine, today's target, three cues, the video, then the details.
+ * From a warm-up or cool-down, pass routine: { label, item } instead of item.
  */
-export function exerciseInfo(exId, { item, suggestion } = {}) {
+export function exerciseInfo(exId, { item, suggestion, routine } = {}) {
   const def = getExercise(exId);
   if (!def) return h('p', { class: 'muted' }, 'Exercise not found.');
   const { sessions, profile } = ctx();
@@ -77,16 +81,21 @@ export function exerciseInfo(exId, { item, suggestion } = {}) {
       h('span', { class: 'chip plain' }, def.equipment),
       def.unilateral ? h('span', { class: 'chip plain' }, 'One side at a time') : null),
     h('p', { class: 'small ink-2' }, h('strong', null, 'Works: '), def.muscles),
-    item ? h('div', { class: `target-card${suggestion?.kind === 'up' ? ' up' : ''}` },
+    routine ? h('div', { class: 'target-card' },
+      h('div', { class: 'eyebrow' }, routine.label),
+      h('div', { class: 'tc-main' }, routineTarget(routine.item)),
+      routine.item.note ? h('div', { class: 'small ink-2' }, routine.item.note) : null) : null,
+    !routine && item ? h('div', { class: `target-card${suggestion?.kind === 'up' ? ' up' : ''}` },
       h('div', { class: 'eyebrow' }, 'In this workout'),
       h('div', { class: 'tc-main' }, `${targetText(item, def)}${item.rest ? ` · rest ${fmtClock(item.rest)}` : ''}`),
       suggestion?.text ? h('div', { class: 'small ink-2' }, suggestion.text) : null) : null,
+    def.group === 'Stretching' ? h('p', { class: 'small ink-2' }, STRETCH_TIP) : null,
     findIt(def),
     def.cues?.length ? cueCard(def.cues) : null,
     demoVideo(exId),
     def.steps?.length ? stepsDisclosure(def.steps) : null,
     def.mistakes?.length ? h('div', { class: 'callout warn' }, h('strong', null, 'Avoid: '), def.mistakes.join(' · ')) : null,
-    historyBlock(exId, def, sessions, unit));
+    routine || def.group === 'Stretching' ? null : historyBlock(exId, def, sessions, unit));
 }
 
 /** "Find it in the gym": other names and what the equipment looks like. */
@@ -104,6 +113,20 @@ export function findIt(def) {
 export function exerciseMatches(e, q) {
   if (!q) return true;
   return [e.name, e.muscles, e.equipment, ...(e.aka || [])].some((t) => t && t.toLowerCase().includes(q));
+}
+
+/** Rows for warm-up or cool-down items, with "Stretch" / "Warm up" labels between the parts. */
+export function routineRows(items, row) {
+  const out = [];
+  let part = null;
+  items.forEach((it, i) => {
+    if (it.part && it.part !== part) {
+      part = it.part;
+      out.push(h('div', { class: 'list-sub' }, part === 'stretch' ? 'Stretch' : 'Warm up'));
+    }
+    out.push(row(it, i));
+  });
+  return out;
 }
 
 /** Small first-frame thumbnail for list rows (null when there's no photo). */

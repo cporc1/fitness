@@ -496,10 +496,11 @@ export const SWIM_WORKOUTS = {
   ]),
 };
 
+/** Two minutes on the pool deck: the same moves as the gym warm-up (see plans.js). */
 export const SWIM_WARMUP_DRY = [
-  'Arm circles forward and back, 10 each',
-  'Shoulder hugs and chest openers, 10',
-  'Leg swings, 10 each side',
+  { ex: 'arm-circles', reps: 10, say: '10 each way' },
+  { ex: 'chest-opener', reps: 10 },
+  { ex: 'leg-swing', reps: 10 },
 ];
 
 /** The two swim sessions of a phase, technique first. */

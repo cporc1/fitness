@@ -4,10 +4,11 @@ import * as store from '../store.js';
 import { h, icon, ICONS, fmtClock, fmtNum, fmtDate, put, fill } from '../util.js';
 import { ctx, back, tab, registerRoute } from '../app.js';
 import { STROKES, getDrill, guideForItem, SWIM_WARMUP_DRY } from '../data/swim.js';
-import { computeSwimDistance, plannedSwimDistance } from '../program.js';
+import { computeSwimDistance, plannedSwimDistance, routineTarget } from '../program.js';
 import { finishSession, discardActive, saveActive } from '../actions.js';
-import { openDrillSheet } from './library.js';
-import { toast } from '../ui.js';
+import { openDrillSheet, openExerciseSheet, exThumb } from './library.js';
+import { getExercise } from '../data/exercises.js';
+import { toast, listItem } from '../ui.js';
 import { ripple } from '../motion.js';
 import { startRest, stopRest, restBar, beep } from '../timer.js';
 import { openClockSheet } from './session-gym.js';
@@ -125,7 +126,12 @@ function swimEditor(session, mode) {
   function beforeYouGetIn() {
     return h('section', { class: 'card before-swim' },
       h('div', { class: 'row between' }, h('strong', null, 'Before you get in · 2 min'), h('span', { class: 'chip swim' }, icon(ICONS.wave, 14), `${poolLen} ${unit} pool`)),
-      h('ul', { class: 'checklist' }, SWIM_WARMUP_DRY.map((t) => h('li', null, t))),
+      h('div', { class: 'list dry-list' }, SWIM_WARMUP_DRY.map((it) => listItem({
+        title: getExercise(it.ex)?.name || it.ex,
+        sub: routineTarget(it),
+        leading: exThumb(it.ex),
+        onclick: () => openExerciseSheet(it.ex, { routine: { label: 'Before you swim', item: it } }),
+      }))),
       h('p', { class: 'small ink-2' }, h('strong', null, 'Apple Watch? '), `Start a Pool Swim workout and set the pool length to ${poolLen} ${unit === 'yd' ? 'yards' : 'meters'}. It counts lengths and saves to Health; log the sets here.`),
       h('button', { class: 'btn pool block', onclick: () => { session.dryDone = true; persist(); draw(); } }, 'Got it, I\'m in the water'));
   }

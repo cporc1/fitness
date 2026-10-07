@@ -1,20 +1,22 @@
 // Live gym workout logger (also used to edit a saved gym session).
 // Two views of the same data: List (every exercise as a card, the default)
-// and Focus (one exercise per page, swipe between them, − / + steppers so you
+// and Focus (one step per page, swipe between them, − / + steppers so you
 // never need the keyboard). The toggle sits in the top bar.
+// A live workout runs in three parts: warm-up (stretches, then warm-up
+// moves), the exercises, and the cool-down stretches.
 
 import * as store from '../store.js';
 import { h, icon, ICONS, fmtClock, fmtNum, toNumber, fmtDate, debounce, put, fill } from '../util.js';
 import { ctx, back, tab, registerRoute, go, render } from '../app.js';
 import { getExercise } from '../data/exercises.js';
-import { WARMUP_GYM, COOLDOWN_GYM } from '../data/plans.js';
-import { exerciseEntry, stepWeight } from '../program.js';
+import { RAMP_UP_NOTE } from '../data/plans.js';
+import { exerciseEntry, stepWeight, routineTarget } from '../program.js';
 import { finishSession, discardActive, saveActive } from '../actions.js';
-import { exercisePicker, openExerciseSheet, fmtSet, exThumb } from './library.js';
+import { exercisePicker, openExerciseSheet, fmtSet, exThumb, routineRows } from './library.js';
 import { demoFrames } from '../media.js';
 import { sheet, toast } from '../ui.js';
 import { reducedMotion } from '../motion.js';
-import { startRest, stopRest, restBar, paceClock, onRestChange, restState } from '../timer.js';
+import { startRest, stopRest, restBar, paceClock, onRestChange, restState, countdownRing, beep } from '../timer.js';
 
 const SUGG_CHIP = {
   up: ['good', 'Add weight'], same: ['plain', 'Same weight'], down: ['danger', 'Go lighter'],
@@ -150,7 +152,7 @@ function sessionEditor(session, mode) {
   function move(i, d) {
     const [x] = session.exercises.splice(i, 1);
     session.exercises.splice(i + d, 0, x);
-    if (focus) session.focusIndex = i + d + 1;
+    if (focus) session.focusIndex = exPage(i + d);
     persistNow();
     refreshAll();
   }
@@ -192,6 +194,181 @@ function sessionEditor(session, mode) {
     entry.sets.push({ ...(lastSet ? { w: lastSet.w ?? null } : {}), done: false });
     persistNow();
     refreshOne(i);
+  }
+
+  // ---------------- warm-up and cool-down ----------------
+
+  const ROUTINE = {
+    warmup: { title: 'Warm-up', label: 'In this warm-up' },
+    cooldown: { title: 'Cool-down', label: 'In this cool-down' },
+  };
+  const routineItems = (key) => (live ? session[key] || [] : []);
+
+  function openRoutineSheet(key, it) {
+    openExerciseSheet(it.ex, { routine: { label: ROUTINE[key].label, item: it } });
+  }
+
+  function setRoutineDone(key, i, done) {
+    session[key][i].done = done;
+    persistNow();
+    if (focus) refreshRoutinePage(key, i); else refreshRoutineCard(key);
+  }
+
+  /** List view: one card per part, each item a row you can tick. */
+  function routineCard(key) {
+    const items = routineItems(key);
+    const doneN = items.filter((x) => x.done).length;
+    const rows = routineRows(items, (it, i) => {
+      const name = getExercise(it.ex)?.name || it.ex;
+      return h('div', { class: `rt-row${it.done ? ' done' : ''}` },
+        h('button', { class: 'rt-main', type: 'button', 'aria-label': `How to do ${name}`, onclick: () => openRoutineSheet(key, it) },
+          exThumb(it.ex) || h('span', { class: 'sr-icon other' }, icon(ICONS.timer)),
+          h('span', { class: 'grow' }, h('span', { class: 'li-title' }, name), h('span', { class: 'li-sub' }, routineTarget(it)))),
+        h('button', {
+          class: 'set-check', type: 'button', 'aria-pressed': String(!!it.done), 'aria-label': it.done ? `Undo ${name}` : `Done: ${name}`,
+          onclick: () => setRoutineDone(key, i, !it.done),
+        }, icon(ICONS.check, 22)));
+    });
+    return h('section', { class: `routine-card ${key}${doneN === items.length ? ' complete' : ''}`, 'data-routine': key },
+      h('div', { class: 'rt-head' },
+        h('span', { class: 'rt-title' }, ROUTINE[key].title),
+        h('span', { class: 'xs muted' }, `${doneN} of ${items.length} done`)),
+      h('div', { class: 'list' }, rows),
+      key === 'warmup' ? h('p', { class: 'xs muted rt-foot' }, RAMP_UP_NOTE) : null);
+  }
+
+  function refreshRoutineCard(key) {
+    const old = view.querySelector(`[data-routine="${key}"]`);
+    if (old) old.replaceWith(routineCard(key));
+  }
+
+  // Focus view: a timer for holds and timed moves. One runs at a time, and
+  // it lives here rather than in a page, so redrawing a page keeps it going.
+  const SWITCH_SEC = 5;
+  let hold = null; // { key, i, side, sides, phase: 'hold' | 'switch', total, endsAt }
+  let holdTick = null;
+  const holdWidgets = new Map();
+  const holdTotal = (it) => (it.min ? it.min * 60 : it.sec);
+  const holdSides = (it) => (!it.min && getExercise(it.ex)?.unilateral ? 2 : 1);
+
+  function startHold(key, i) {
+    const it = session[key][i];
+    hold = { key, i, side: 0, sides: holdSides(it), phase: 'hold', total: holdTotal(it), endsAt: Date.now() + holdTotal(it) * 1000 };
+    clearInterval(holdTick);
+    holdTick = setInterval(tickHold, 200);
+    paintHolds();
+  }
+
+  function stopHold() {
+    hold = null;
+    clearInterval(holdTick);
+    holdTick = null;
+    paintHolds();
+  }
+
+  function tickHold() {
+    if (!hold) return;
+    if (!view.isConnected) { stopHold(); return; }
+    if (hold.endsAt > Date.now()) { paintHolds(); return; }
+    if (hold.phase === 'hold' && hold.side + 1 < hold.sides) {
+      beep([0, 0.2], 660);
+      Object.assign(hold, { phase: 'switch', endsAt: Date.now() + SWITCH_SEC * 1000 });
+    } else if (hold.phase === 'switch') {
+      beep([0], 880);
+      Object.assign(hold, { phase: 'hold', side: hold.side + 1, endsAt: Date.now() + hold.total * 1000 });
+    } else {
+      beep([0, 0.25, 0.5], 880);
+      try { navigator.vibrate?.([200, 100, 200]); } catch { /* not supported */ }
+      completeRoutine(hold.key, hold.i);
+      return;
+    }
+    paintHolds();
+  }
+
+  function paintHolds() {
+    for (const [id, w] of holdWidgets) {
+      if (!w.el.isConnected && pager.isConnected) { holdWidgets.delete(id); continue; }
+      w.paint();
+    }
+  }
+
+  function holdTimer(key, i) {
+    const it = session[key][i];
+    const total = holdTotal(it);
+    const sides = holdSides(it);
+    const ring = countdownRing();
+    const time = h('span', { class: 'ht-time' });
+    const label = h('span', { class: 'ht-label' });
+    const btn = h('button', { class: 'btn lg block', type: 'button' });
+    const el = h('div', { class: 'hold-timer', role: 'timer' },
+      h('div', { class: 'ht-dial' }, ring.el, h('div', { class: 'ht-read' }, time, label)),
+      btn);
+    const paint = () => {
+      const mine = !!hold && hold.key === key && hold.i === i;
+      const switching = mine && hold.phase === 'switch';
+      const rem = mine ? Math.max(0, (hold.endsAt - Date.now()) / 1000) : total;
+      el.classList.toggle('running', mine);
+      el.classList.toggle('switching', switching);
+      time.textContent = fmtClock(Math.ceil(rem));
+      if (switching) label.textContent = 'Switch sides';
+      else if (sides === 2) label.textContent = mine && hold.side === 1 ? 'Second side' : 'First side';
+      else label.textContent = it.min ? 'Easy pace' : 'Hold';
+      ring.update(rem, switching ? SWITCH_SEC : total);
+      btn.className = `btn lg block ${mine ? 'quiet' : 'iron'}`;
+      btn.replaceChildren(...(mine
+        ? [icon(ICONS.close, 20), 'Stop timer']
+        : [icon(ICONS.play, 20), `Start ${it.min ? `${it.min} min` : `${total} s`}${sides === 2 ? ' each side' : ''}`]));
+      btn.onclick = mine ? stopHold : () => startHold(key, i);
+    };
+    holdWidgets.set(`${key}:${i}`, { el, paint });
+    paint();
+    return el;
+  }
+
+  /** Tick an item off and move on to the next step. */
+  function completeRoutine(key, i) {
+    if (hold && hold.key === key && hold.i === i) stopHold();
+    const it = session[key][i];
+    if (!it.done) { it.done = true; persistNow(); }
+    refreshRoutinePage(key, i);
+    const page = routinePageIdx(key, i);
+    setTimeout(() => { if (pager.isConnected && (session.focusIndex ?? 0) === page) goToPage(page + 1); }, 500);
+  }
+
+  function routinePage(key, i) {
+    const items = routineItems(key);
+    const it = items[i];
+    const def = getExercise(it.ex);
+    const name = def?.name || it.ex;
+    const page = routinePageIdx(key, i);
+    const timed = !!(it.sec || it.min);
+    const kindWord = key === 'warmup' && it.part === 'move' ? 'Warm up' : 'Stretch';
+    return h('section', { class: `fpage rt-page ${key}${it.done ? ' done' : ''}`, 'aria-label': `${name}, ${ROUTINE[key].title.toLowerCase()} ${i + 1} of ${items.length}` },
+      h('button', { class: 'fpage-media', type: 'button', 'aria-label': `How to do ${name}`, onclick: () => openRoutineSheet(key, it) },
+        demoFrames(it.ex, name) || h('span', { class: 'tile-ph', style: { height: '100%' } }, icon(ICONS.timer, 36))),
+      h('div', { class: 'stack', style: { gap: '2px' } },
+        h('span', { class: 'eyebrow' }, `${ROUTINE[key].title} · ${i + 1} of ${items.length}`),
+        h('h2', { class: 'fpage-name' }, name),
+        h('span', { class: 'ex-target' }, `${kindWord} · ${routineTarget(it)}`)),
+      it.note ? h('p', { class: 'small ink-2' }, it.note) : null,
+      def?.cues?.length ? h('ul', { class: 'cues' }, def.cues.slice(0, 2).map((c) => h('li', null, c))) : null,
+      it.done
+        ? h('div', { class: 'stack' },
+          h('div', { class: 'rt-done-badge' }, icon(ICONS.check, 18), 'Done'),
+          h('button', { class: 'btn good lg block', onclick: () => goToPage(page + 1) }, 'Next', icon(ICONS.chevron, 18)),
+          h('button', { class: 'btn text', onclick: () => setRoutineDone(key, i, false) }, 'Undo'))
+        : h('div', { class: 'stack' },
+          timed ? holdTimer(key, i) : h('button', { class: 'btn iron lg block rt-done', onclick: () => completeRoutine(key, i) }, icon(ICONS.check, 20), 'Done'),
+          h('div', { class: 'row', style: { justifyContent: 'center' } },
+            timed ? h('button', { class: 'btn text', onclick: () => completeRoutine(key, i) }, 'Mark done') : null,
+            h('button', { class: 'btn text', onclick: () => goToPage(page + 1) }, 'Skip'))),
+      key === 'warmup' && i === 0 ? h('p', { class: 'small muted' }, 'Swipe sideways to move between steps. Tap the photo for how to do it.') : null);
+  }
+
+  function refreshRoutinePage(key, i) {
+    const old = pager.children[routinePageIdx(key, i)];
+    if (old) old.replaceWith(routinePage(key, i));
+    refreshFinish();
   }
 
   // ---------------- list view ----------------
@@ -254,9 +431,26 @@ function sessionEditor(session, mode) {
 
   // ---------------- focus view ----------------
 
+  // Pages: each warm-up item, each exercise, each cool-down item, then Finish.
   const pager = h('div', { class: 'pager' });
   const dots = h('div', { class: 'pager-dots', 'aria-hidden': 'true' });
-  const pageCount = () => session.exercises.length + 2; // warm-up, exercises, cool-down
+  const W = () => routineItems('warmup').length;
+  const exPage = (i) => W() + i;
+  const coolPage = (k) => W() + session.exercises.length + k;
+  const finishIdx = () => coolPage(routineItems('cooldown').length);
+  const pageCount = () => finishIdx() + 1;
+  const routinePageIdx = (key, i) => (key === 'warmup' ? i : coolPage(i));
+
+  /** The first step not done yet. Once any set is ticked, the warm-up counts as over. */
+  function firstOpenPage() {
+    const started = session.exercises.some((e) => e.sets.some((st) => st.done));
+    const w = routineItems('warmup').findIndex((x) => !x.done);
+    if (w >= 0 && !started) return w;
+    const e = session.exercises.findIndex((x) => x.sets.some((st) => !st.done));
+    if (e >= 0) return exPage(e);
+    const c = routineItems('cooldown').findIndex((x) => !x.done);
+    return c >= 0 ? coolPage(c) : finishIdx();
+  }
 
   function goToPage(idx, smooth = true) {
     const n = Math.max(0, Math.min(pageCount() - 1, idx));
@@ -357,46 +551,59 @@ function sessionEditor(session, mode) {
       sugg ? h('div', { class: `ex-sugg ${sugg.kind}`, style: { margin: 0 } }, chip ? h('span', { class: `chip ${chip[0]}` }, chip[1]) : null, h('span', { class: 'clamp-2' }, sugg.text)) : null,
       h('div', { class: 'fsets' }, rows),
       allDone
-        ? h('button', { class: 'btn good lg block', onclick: () => goToPage(i + 2) }, icon(ICONS.check, 20), i < session.exercises.length - 1 ? 'Done · next exercise' : 'Done · cool down')
+        ? h('button', { class: 'btn good lg block', onclick: () => goToPage(exPage(i) + 1) }, icon(ICONS.check, 20),
+          i < session.exercises.length - 1 ? 'Done · next exercise' : routineItems('cooldown').length ? 'Done · cool down' : 'Done · finish')
         : h('button', { class: 'btn iron lg block complete-set', onclick: () => toggleSet(entry, i, cur) }, icon(ICONS.check, 20), `Complete set ${cur + 1}`),
       h('button', { class: 'btn text', onclick: () => addSet(entry, i) }, icon(ICONS.plus, 18), 'Add a set'));
   }
 
-  function warmupPage() {
-    return h('section', { class: 'fpage' },
-      h('span', { class: 'eyebrow' }, 'Before you start'),
-      h('h2', { class: 'fpage-name' }, 'Warm-up · 5–8 min'),
-      h('ul', { class: 'checklist' }, WARMUP_GYM.map((t) => h('li', null, t))),
-      h('button', { class: 'btn iron lg block', onclick: () => goToPage(1) }, 'I\'m warmed up', icon(ICONS.chevron, 18)),
-      h('p', { class: 'small muted' }, 'Swipe sideways to move between exercises. Tap the photo for how to do it.'));
-  }
-
-  function cooldownPage() {
-    return h('section', { class: 'fpage' },
+  function finishPage() {
+    const sets = session.exercises.reduce((n, ex) => n + ex.sets.filter((st) => st.done).length, 0);
+    const part = (key) => {
+      const items = routineItems(key);
+      return items.length ? `${ROUTINE[key].title}: ${items.filter((x) => x.done).length} of ${items.length}` : null;
+    };
+    return h('section', { class: 'fpage finish-page' },
       h('span', { class: 'eyebrow' }, 'Last step'),
-      h('h2', { class: 'fpage-name' }, 'Cool-down · 3–5 min'),
-      h('ul', { class: 'checklist' }, COOLDOWN_GYM.map((t) => h('li', null, t))),
+      h('h2', { class: 'fpage-name' }, 'Finish workout'),
+      h('ul', { class: 'checklist' }, [part('warmup'), `Exercises: ${sets} ${sets === 1 ? 'set' : 'sets'} done`, part('cooldown')]
+        .filter(Boolean).map((t) => h('li', null, t))),
       h('button', { class: 'btn iron lg block', onclick: () => { persistNow(); finishSession(session); } }, icon(ICONS.check, 20), 'Finish workout'),
       h('button', { class: 'btn quiet block', onclick: addExercise }, icon(ICONS.plus, 18), 'Add an exercise'),
       h('button', { class: 'btn ghost block', onclick: () => discardActive() }, 'Discard workout'));
   }
 
+  function refreshFinish() {
+    const old = pager.children[finishIdx()];
+    if (old) old.replaceWith(finishPage());
+  }
+
   function drawPager() {
-    const idx = session.focusIndex ?? (session.exercises.some((e) => e.sets.some((st) => st.done)) ? 1 : 0);
-    fill(pager, warmupPage(), ...session.exercises.map((ex, i) => exercisePage(ex, i)), cooldownPage());
-    fill(dots, ...Array.from({ length: pageCount() }, () => h('span')));
+    const idx = session.focusIndex ?? firstOpenPage();
+    holdWidgets.clear();
+    fill(pager,
+      ...routineItems('warmup').map((_, i) => routinePage('warmup', i)),
+      ...session.exercises.map((ex, i) => exercisePage(ex, i)),
+      ...routineItems('cooldown').map((_, i) => routinePage('cooldown', i)),
+      finishPage());
+    // Warm-up and cool-down dots are green, with a little space between the parts.
+    const coolStart = coolPage(0);
+    fill(dots, ...Array.from({ length: pageCount() }, (_, i) => h('span', {
+      class: [(i < W() || (i >= coolStart && i < finishIdx())) && 'rt', i > 0 && [W(), coolStart, finishIdx()].includes(i) && 'gap'],
+    })));
     updateProgress();
     requestAnimationFrame(() => { goToPage(idx, false); updateDots(); });
   }
 
   function refreshPage(i) {
-    const old = pager.children[i + 1];
+    const old = pager.children[exPage(i)];
     if (old) old.replaceWith(exercisePage(session.exercises[i], i));
+    refreshFinish();
     updateProgress();
     const entry = session.exercises[i];
-    // Finished the last set: slide on to the next exercise while you rest.
-    if (entry.sets.length && entry.sets.every((st) => st.done) && (session.focusIndex ?? 0) === i + 1) {
-      setTimeout(() => { if (pager.isConnected) goToPage(i + 2); }, 650);
+    // Finished the last set: slide on to the next step while you rest.
+    if (entry.sets.length && entry.sets.every((st) => st.done) && (session.focusIndex ?? 0) === exPage(i)) {
+      setTimeout(() => { if (pager.isConnected) goToPage(exPage(i) + 1); }, 650);
     }
   }
 
@@ -416,7 +623,7 @@ function sessionEditor(session, mode) {
           : def?.type === 'time' ? { sets: 2, reps: [20, 40], rest: 45 }
             : { sets: 3, reps: [8, 12] };
         session.exercises.push(exerciseEntry(id, target, sessions, unit));
-        if (focus) session.focusIndex = session.exercises.length; // the new exercise's page
+        if (focus) session.focusIndex = exPage(session.exercises.length - 1); // the new exercise's page
         persistNow();
         refreshAll();
         if (!focus) setTimeout(() => cardsWrap.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
@@ -426,10 +633,7 @@ function sessionEditor(session, mode) {
 
   function switchView() {
     session.view = focus ? 'list' : 'focus';
-    if (session.view === 'focus') {
-      const firstOpen = session.exercises.findIndex((e) => e.sets.some((st) => !st.done));
-      session.focusIndex = firstOpen >= 0 ? firstOpen + 1 : 0;
-    }
+    if (session.view === 'focus') session.focusIndex = firstOpenPage();
     persistNow();
     render();
   }
@@ -460,18 +664,18 @@ function sessionEditor(session, mode) {
     drawPager();
     put(view, head, h('div', { class: 'progress-track', 'aria-hidden': 'true' }, progressFill), dots, pager);
   } else {
-    const warmup = live && session.exercises.length ? h('details', { class: 'card' },
-      h('summary', { style: { cursor: 'pointer', fontWeight: 700 } }, 'Warm-up (5–8 min)'),
-      h('ul', { class: 'checklist' }, WARMUP_GYM.map((t) => h('li', null, t)))) : null;
+    const warm = routineItems('warmup').length > 0;
     rerenderCards();
     put(view,
       head,
       h('div', { class: 'progress-track', 'aria-hidden': 'true' }, progressFill),
       session.focus ? h('p', { class: 'small ink-2' }, session.focus) : null,
-      warmup,
+      warm ? routineCard('warmup') : null,
+      warm ? h('div', { class: 'eyebrow group-title' }, 'Exercises') : null,
       session.exercises.length ? null : h('div', { class: 'chart-empty' }, 'No exercises yet. Add your first one below.'),
       cardsWrap,
       h('button', { class: 'btn quiet block lg', onclick: addExercise }, icon(ICONS.plus, 20), 'Add exercise'),
+      routineItems('cooldown').length ? routineCard('cooldown') : null,
       live
         ? h('div', { class: 'btn-row' },
           h('button', { class: 'btn ghost', onclick: () => discardActive() }, 'Discard workout'),

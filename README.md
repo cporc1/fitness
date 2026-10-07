@@ -22,28 +22,22 @@ A phone-first training app for a beginner with a full gym and a lap pool: a 12-w
 
 ## Using it on your iPhone
 
-The app has to be served from a web address. Two options:
+This repository is the source of truth for the app. GitHub Pages publishes whatever is on the `main` branch at **https://cporc1.github.io/fitness/**, and every change merged into `main` goes live within a minute or two.
 
-### Option A: GitHub Pages (recommended: installs as an app, works offline)
+One-time setup (GitHub Pages is free for public repositories; a private one needs a paid GitHub plan):
 
-GitHub Pages is free for **public** repositories (private repositories need a paid GitHub plan). The code holds no personal data; your workouts stay on your phone.
-
-1. Merge this branch into `main`.
-2. On GitHub: **Settings → General → Danger Zone → Change visibility → Public** (skip if you have GitHub Pro).
-3. **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main`, folder `/ (root)` → Save.**
-4. After a minute the site is live at `https://<your-username>.github.io/fitness/`.
-5. Open that address in **Safari** on your iPhone → **Share** → **Add to Home Screen** → **Add**.
-6. Open Lift & Lap from the new icon and do the setup there. The installed app keeps its own storage, separate from Safari tabs, so log from the icon.
-
-### Option B: inside Claude
-
-The same app can be published as a Claude artifact. Opened in the Claude app or claude.ai, your data syncs privately to your Claude account, so it is on every device you sign in on. It needs a connection to load and doesn't install to the Home Screen.
+1. **Make the repository public:** Settings → General → Danger Zone → Change visibility → Change to public. The code contains no personal data.
+2. **Turn on Pages:** Settings → Pages → Build and deployment → Source: *Deploy from a branch* → Branch: `main`, folder `/ (root)` → Save.
+3. On your iPhone, open the address in **Safari** → **Share** → **Add to Home Screen** → **Add**.
+4. Open Lift & Lap from the new icon and do the setup there. Always log from the icon: the installed app keeps its own storage, separate from Safari tabs.
 
 ## Your data
 
-- Everything is stored on the device (`localStorage`), as one small document per area plus one per month of workouts.
-- **More → Backup & data → Export backup** saves a JSON file (on iPhone it opens the share sheet: save to Files or AirDrop it). **Restore backup** loads one back. Export every few weeks, and before switching phones.
-- Inside Claude, the same documents are mirrored to the artifact's private per-user store (`data/users/<you>/…`); the newest copy of each document wins.
+GitHub holds the app, not your workouts. Your workouts, weights and body measurements are personal, and a public repository would show them to everyone, so they are stored privately on your phone (`localStorage`, one small document per area plus one per month of workouts).
+
+- **More → Backup & data → Export backup** creates a backup file. On iPhone choose **Save to Files → iCloud Drive** so it survives losing or replacing your phone. **Restore backup** loads one back.
+- The app reminds you on the Today screen when your last backup is more than three weeks old.
+- If the app is opened as a Claude artifact instead, the same documents are mirrored to that artifact's private per-user store (`data/users/<you>/…`). That copy is separate from the GitHub Pages one; move data between them with export and restore.
 
 ## Development
 

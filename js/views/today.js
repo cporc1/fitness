@@ -208,6 +208,15 @@ registerRoute('today', (_params, state) => {
     checkIn(state, today),
     h('div', { class: 'tip' }, icon(ICONS.info, 20), h('div', { class: 'stack', style: { gap: '2px' } }, h('span', { class: 'eyebrow' }, 'Tip of the day'), h('p', null, tip))));
 
+  // Data lives on the phone, so nudge for a backup every few weeks.
+  const lastBackup = state.settings?.lastBackupAt?.slice(0, 10);
+  if (store.sync.status !== 'synced' && state.sessions.length >= 3 && (!lastBackup || daysBetween(lastBackup, today) >= 21)) {
+    put(view, h('button', { class: 'card', style: { textAlign: 'left', cursor: 'pointer' }, onclick: () => go('data') },
+      h('div', { class: 'eyebrow' }, lastBackup ? `Last backup ${fmtDate(lastBackup)}` : 'No backup yet'),
+      h('div', { style: { fontWeight: 700 } }, `Back up your ${state.sessions.length} workouts (30 seconds) →`),
+      h('div', { class: 'small muted' }, 'Your history is stored on this phone. A backup in iCloud Drive keeps it safe.')));
+  }
+
   if (daysBetween(state.profile?.startDate || today, today) < 3 && !state.sessions.length) {
     put(view, h('button', { class: 'card', style: { textAlign: 'left', cursor: 'pointer' }, onclick: () => go('guide', { id: 'start' }) },
       h('div', { class: 'eyebrow' }, 'New here?'),

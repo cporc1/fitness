@@ -122,6 +122,8 @@ export function start() {
     if (name === 'active') return; // session views re-render themselves
     render();
   });
+  // Ask the browser not to clear this app's storage under pressure.
+  try { navigator.storage?.persist?.().catch(() => {}); } catch { /* unsupported */ }
   document.addEventListener('pointerdown', unlockAudio, { passive: true });
   window.addEventListener('scroll', () => {
     const bar = document.querySelector('.topbar');

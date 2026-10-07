@@ -310,12 +310,16 @@ registerRoute('data', (_p, state) => {
         ? 'Everything is stored on this device, in this browser. Nothing is sent to a server. Export a backup now and then so you never lose your history.'
         : status === 'error' ? (store.sync.error || 'Cloud sync is paused.')
           : 'Your data is saved on this device and synced privately to your Claude account, so it is there on any device where you open this app.'),
-      h('p', { class: 'xs muted' }, `${state.sessions.length} workouts · ${(state.body?.entries || []).length} body entries`)),
+      h('p', { class: 'xs muted' }, `${state.sessions.length} workouts · ${(state.body?.entries || []).length} body entries · last backup ${state.settings?.lastBackupAt ? fmtDate(state.settings.lastBackupAt.slice(0, 10)) : 'never'}`)),
+    h('p', { class: 'small ink-2' }, 'On iPhone, Export opens the share sheet: choose "Save to Files" and pick iCloud Drive, so the backup survives losing or replacing your phone.'),
     h('div', { class: 'btn-row' },
       h('button', {
         class: 'btn pool', onclick: () => {
           downloadJson(store.exportAll(), `lift-and-lap-backup-${todayISO()}.json`)
-            .then(() => toast('Backup ready'))
+            .then(() => {
+              store.update('settings', (x) => ({ ...x, lastBackupAt: new Date().toISOString() }));
+              toast('Backup ready');
+            })
             .catch(() => toast('Could not create the file here. Try again from the installed app.'));
         },
       }, icon(ICONS.download, 18), 'Export backup'),

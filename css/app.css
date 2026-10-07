@@ -727,6 +727,37 @@ html[data-vt="day-prev"]::view-transition-new(day-content) { animation: day-in-l
 .pager-dots span.rt.on { background: var(--good); }
 .pager-dots span.gap { margin-left: 6px; }
 
+/* ---------- full-screen rest (Focus) ---------- */
+.rest-screen {
+  position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; gap: 16px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: var(--bg); overflow-y: auto; overscroll-behavior: contain;
+  animation: rs-in .28s var(--ease-snappy) both;
+}
+/* While a sheet scales the page, fixed means "inside the page": pin to the visible part. */
+html.sheet-open .rest-screen, html.sheet-closing .rest-screen { top: var(--vy, 0px); bottom: auto; height: 100vh; }
+.rest-screen.over { background: color-mix(in srgb, var(--good) 12%, var(--bg)); }
+.rs-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.rs-dial { position: relative; width: min(66vw, 280px); aspect-ratio: 1; margin: 4px auto 0; flex: none; }
+.rs-dial .count-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rs-ring .face { stroke-width: 10; }
+.rs-ring .arc { stroke: var(--iron); stroke-width: 10; }
+.rest-screen.over .rs-ring .arc { stroke: var(--good); }
+.rs-read { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.rs-time { font-family: var(--font-display); font-weight: 700; font-size: clamp(56px, 18vw, 76px); line-height: 1; font-variant-numeric: tabular-nums; }
+.rs-label { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rest-screen.over .rs-label { color: var(--good-ink); }
+.rest-screen.over .rs-time { font-size: clamp(46px, 14vw, 60px); }
+.rs-adjust { display: flex; justify-content: center; gap: 10px; }
+.rs-adjust .btn { min-width: 96px; }
+.rs-next { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.rs-next .grow { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.rs-next .ex-thumb { width: 64px; height: 48px; }
+.rs-next-name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); line-height: 1.15; }
+.rs-next-sub { font-size: var(--fs-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rs-go { margin-top: auto; min-height: 60px; flex: none; }
+@keyframes rs-in { from { opacity: 0; transform: scale(.98); } }
+
 /* ---------- rest timer ---------- */
 .rest-bar {
   position: fixed; z-index: 40; left: 0; right: 0; margin: 0 auto; bottom: var(--tabbar-gap);

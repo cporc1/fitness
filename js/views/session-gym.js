@@ -16,7 +16,7 @@ import { exercisePicker, openExerciseSheet, fmtSet, exThumb, routineRows } from 
 import { demoFrames } from '../media.js';
 import { sheet, toast } from '../ui.js';
 import { reducedMotion } from '../motion.js';
-import { startRest, stopRest, restBar, paceClock, onRestChange, restState, countdownRing, beep } from '../timer.js';
+import { startRest, stopRest, adjustRest, restBar, paceClock, onRestChange, restState, countdownRing, beep } from '../timer.js';
 
 const SUGG_CHIP = {
   up: ['good', 'Add weight'], same: ['plain', 'Same weight'], down: ['danger', 'Go lighter'],
@@ -121,11 +121,16 @@ function sessionEditor(session, mode) {
       const next = entry.sets[si + 1];
       if (next && !next.done && st.w != null && next.w == null) next.w = st.w;
       if (live && si < entry.sets.length - 1) {
+        restNext = { i, si: si + 1 };
+        restTucked = false;
         startRest(defaultRest(entry, settings), { label: `Rest · next: set ${si + 2}`, kind: 'gym' });
       } else if (live) {
         const nextEx = session.exercises[i + 1];
-        if (nextEx) startRest(defaultRest(entry, settings), { label: `Rest · next: ${getExercise(nextEx.ex)?.name || 'exercise'}`, kind: 'gym' });
-        else stopRest();
+        if (nextEx) {
+          restNext = { i: i + 1, si: Math.max(0, nextEx.sets.findIndex((x) => !x.done)) };
+          restTucked = false;
+          startRest(defaultRest(entry, settings), { label: `Rest · next: ${getExercise(nextEx.ex)?.name || 'exercise'}`, kind: 'gym' });
+        } else stopRest();
       }
     } else {
       st.done = false;
@@ -194,6 +199,94 @@ function sessionEditor(session, mode) {
     entry.sets.push({ ...(lastSet ? { w: lastSet.w ?? null } : {}), done: false });
     persistNow();
     refreshOne(i);
+  }
+
+  // ---------------- full-screen rest (Focus) ----------------
+  // In Focus mode the rest between sets takes over the screen, so the next
+  // set can't start before it's over: a big countdown, −15 / +15, what's
+  // next, and Skip. "Show workout" tucks it into the rest bar for the rest
+  // of this rest; tapping the bar brings it back.
+
+  let restNext = null; // { i, si }: the set that follows this rest
+  let restTucked = false;
+
+  /** For a rest that started elsewhere (e.g. in the list view): the next set not done. */
+  function guessNext() {
+    const cur = (session.focusIndex ?? 0) - W();
+    for (let k = cur >= 0 && cur < session.exercises.length ? cur : 0; k < session.exercises.length; k++) {
+      const si = session.exercises[k].sets.findIndex((st) => !st.done);
+      if (si >= 0) return { i: k, si };
+    }
+    return { i: -1, si: 0 };
+  }
+
+  /** "100 lb × 10" for a set you haven't done yet: what's entered, else the suggestion. */
+  function plannedLine(entry, st) {
+    const sugg = entry.suggestion || {};
+    const planned = { ...st };
+    if (usesWeight(entry.type) && planned.w == null) planned.w = sugg.weight ?? null;
+    if (usesReps(entry.type) && planned.r == null) planned.r = sugg.reps ?? entry.target.reps[0];
+    if ((entry.type === 'time' || entry.type === 'weight_time') && planned.sec == null) planned.sec = entry.target.reps[0];
+    if (entry.type === 'cardio' && planned.min == null) planned.min = entry.target.reps[0];
+    return fmtSet(planned, entry.type, unit);
+  }
+
+  function upNextCard(nx) {
+    const entry = session.exercises[nx.i];
+    if (!entry) {
+      return h('div', { class: 'rs-next' }, h('span', { class: 'sr-icon other' }, icon(ICONS.rest)),
+        h('span', { class: 'grow' }, h('span', { class: 'eyebrow' }, 'Up next'), h('span', { class: 'rs-next-name' }, 'Cool-down')));
+    }
+    const name = getExercise(entry.ex)?.name || entry.ex;
+    return h('button', {
+      class: 'rs-next', type: 'button', 'aria-label': `Up next: ${name}. How to do it.`,
+      onclick: () => openExerciseSheet(entry.ex, { item: entry.target, suggestion: entry.suggestion }),
+    },
+    exThumb(entry.ex) || h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),
+    h('span', { class: 'grow' },
+      h('span', { class: 'eyebrow' }, 'Up next'),
+      h('span', { class: 'rs-next-name' }, name),
+      h('span', { class: 'rs-next-sub' }, `Set ${nx.si + 1} of ${entry.sets.length} · ${plannedLine(entry, entry.sets[nx.si] || {})}`)));
+  }
+
+  function restScreen(onTuck) {
+    const ring = countdownRing('rs-ring');
+    const time = h('span', { class: 'rs-time' });
+    const label = h('span', { class: 'rs-label' });
+    const nextWrap = h('div');
+    const go = h('button', { class: 'btn lg block rs-go', type: 'button', onclick: () => stopRest() });
+    const el = h('div', { class: 'rest-screen', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Rest', hidden: true },
+      h('div', { class: 'rs-top' },
+        h('span', { class: 'eyebrow' }, 'Rest'),
+        h('button', { class: 'btn text', type: 'button', onclick: () => { restTucked = true; update(restState()); onTuck(); } }, 'Show workout')),
+      h('div', { class: 'rs-dial', role: 'timer' }, ring.el, h('div', { class: 'rs-read' }, time, label)),
+      h('div', { class: 'rs-adjust' },
+        h('button', { class: 'btn quiet', type: 'button', 'aria-label': 'Subtract 15 seconds', onclick: () => adjustRest(-15) }, '−15 s'),
+        h('button', { class: 'btn quiet', type: 'button', 'aria-label': 'Add 15 seconds', onclick: () => adjustRest(15) }, '+15 s')),
+      nextWrap,
+      go);
+    let drawn = null;
+    function update(rs) {
+      const show = rs.running && !restTucked;
+      if (el.hidden === show) {
+        el.hidden = !show;
+        // Close the keyboard if a number was being typed.
+        if (show && document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      }
+      if (!show) return;
+      const over = rs.remaining <= 0;
+      el.classList.toggle('over', over);
+      time.textContent = over ? `+${fmtClock(-rs.remaining)}` : fmtClock(Math.ceil(rs.remaining));
+      label.textContent = over ? 'Go!' : 'Rest';
+      ring.update(over ? 1 : rs.remaining, over ? 1 : rs.duration);
+      if (!restNext) restNext = guessNext();
+      if (restNext !== drawn) { drawn = restNext; fill(nextWrap, upNextCard(restNext)); }
+      go.className = `btn lg block rs-go ${over ? 'good' : 'iron'}`;
+      go.textContent = over ? (session.exercises[restNext.i] ? `Start set ${restNext.si + 1}` : 'Continue') : 'Skip rest';
+    }
+    const off = onRestChange(update);
+    update(restState());
+    return { el, update: () => update(restState()), destroy: off };
   }
 
   // ---------------- warm-up and cool-down ----------------
@@ -684,10 +777,18 @@ function sessionEditor(session, mode) {
   }
 
   if (live) {
-    const bar = restBar({ onOpen: openClockSheet });
-    put(view, bar.el);
+    // List: the floating rest bar. Focus: the full-screen rest, with the bar
+    // only while it's tucked away.
+    let screen = null;
+    const bar = restBar({
+      onOpen: focus ? () => { restTucked = false; screen.update(); bar.update(); } : openClockSheet,
+      visible: () => !focus || restTucked,
+      openLabel: focus ? 'Show rest' : 'Show pace clock',
+    });
+    screen = focus ? restScreen(() => bar.update()) : null;
+    put(view, bar.el, screen?.el);
     const timerId = setInterval(() => {
-      if (!view.isConnected) { clearInterval(timerId); bar.destroy(); return; }
+      if (!view.isConnected) { clearInterval(timerId); bar.destroy(); screen?.destroy(); return; }
       updateProgress();
     }, 1000);
   }

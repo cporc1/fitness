@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** all phases (0–4), plus fix 5.1. Checkpoint 5.2 is on the working branch.
-- **Next up:** checkpoint 5.3 in the follow-up round below.
+- **Live on `main`:** all phases (0–4), plus fix 5.1. Checkpoints 5.2 and 5.3 are on the working branch.
+- **Next up:** checkpoint 5.4 in the follow-up round below.
 - **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
@@ -108,7 +108,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Cool-down: static stretches.
   - Each item is its own line with a photo and a target (hold time or reps), on the Workout page and in a live workout. In Focus mode each one is a page of its own.
   - Exercise photos come from Free Exercise DB (public domain), like the rest.
-- [ ] **5.3 Full-screen rest in Focus mode.**
+- [x] **5.3 Full-screen rest in Focus mode.**
   - Between sets and exercises, the rest takes over the screen: a big countdown, what's up next, and −15 s / +15 s / Skip.
   - When the rest ends, it says Go.
   - The list view keeps the floating rest pill.
@@ -165,3 +165,10 @@ Start a new Claude Code session on `cporc1/fitness` and say:
     - Holds get a timer with a 5 s "switch sides" gap; it ticks the item and moves on.
     - Green dots mark warm-up and cool-down pages.
   - The celebration and History show "Warm-up 7/7 · Cool-down 5/5". The swim's dry warm-up uses the same rows. SW v8.
+- 2026-10-07: 5.3 done.
+  - In Focus mode, `restScreen()` in `session-gym.js` covers the screen while a rest runs:
+    - a countdown ring (`countdownRing()` in `timer.js`), −15 s / +15 s, and "Up next" with the set and its planned weight;
+    - Skip rest, which becomes "Start set N" once the rest is over.
+  - "Show workout" tucks it into the rest bar (`restBar({ visible })`); tapping the bar brings it back.
+  - While a sheet scales the page, `html.sheet-open .rest-screen` pins it to the visible part.
+  - The list view keeps the rest bar and the pace clock.

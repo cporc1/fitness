@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** Phase 0 (swipe-back router, glass sheets, browser tests).
-- **Next up:** Phase 1 pull request, then checkpoint 2.1.
+- **Live on `main`:** Phases 0 and 1 (router, glass sheets, four tabs, new Today, Workout page, Plan, Learn).
+- **Next up:** checkpoint 2.2.
 
 ## Checkpoints
 
@@ -60,10 +60,10 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - At most one banner at a time.
 - [x] **1.4 Plan restructure.**
   - Program header, 7 day chips, workouts in rotation, your workouts and the Program list.
-- [ ] **Phase 1 PR merged.**
+- [x] **Phase 1 PR merged.** [cporc1/fitness#4](https://github.com/cporc1/fitness/pull/4)
 
 ### Phase 2: Progress
-- [ ] **2.1 Stats.**
+- [x] **2.1 Stats.**
   - `RANGES`, `buckets`, `progressSummary` and the per-mode sections in `js/stats.js`, with unit tests.
   - Tests check that totals match the buckets and that comparisons work across a month boundary.
 - [ ] **2.2 Progress screen and History page.**
@@ -104,3 +104,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: 1.2 done. `js/views/workout.js` (route `workout`, replaces `template`; exports `workoutSummary` for Today cards). `openExerciseSheet(id, { item, suggestion })` and `openDrillSheet(id, { target })` in `library.js` show today's target when opened from a workout.
 - 2026-10-07: 1.3 done. Today keeps the selected day in module state (`showDay(iso)` jumps there from History). Day changes animate only `.day-content` (`html[data-vt=day-next|day-prev]`). The card → Workout page morph uses `sharedHero` in `router.js` and `view-transition-name: wk-hero`. The `day` route is gone.
 - 2026-10-07: 1.4 done. Plan has a program card (About the program opens a sheet with the phases), 7 day chips, horizontal workout cards with "Up next", your workouts with a Create card, and the Program list.
+- 2026-10-07: Phase 1 merged (#4). 2.1 done: `RANGES`, `buckets`, `periodKpis`, `progressSummary`, `setsByMuscleGroup`, `swimDistanceByStroke`, `weekRecords` in `js/stats.js` with 4 new unit tests (27 total).

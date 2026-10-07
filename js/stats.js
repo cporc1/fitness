@@ -1,6 +1,8 @@
 // Pure calculations over logged sessions. No DOM, no storage: easy to test.
 
-import { weekStart, addDays, round, KG_PER_LB } from './util.js';
+import { weekStart, addDays, weekdayIndex, round, KG_PER_LB } from './util.js';
+import { getExercise } from './data/exercises.js';
+import { STROKES } from './data/swim.js';
 
 export const YD_PER_M = 1.0936133;
 
@@ -175,6 +177,143 @@ export function weeklySeries(sessions, todayIso, n, valueFn) {
     w = addDays(w, -7);
   }
   return out;
+}
+
+// ---------------- progress: ranges, buckets, summaries ----------------
+
+export const RANGES = [
+  { id: '1w', label: '1 week', bucket: 'day', count: 7 },
+  { id: '8w', label: '8 weeks', bucket: 'week', count: 8 },
+  { id: '12w', label: '12 weeks', bucket: 'week', count: 12 },
+  { id: '6m', label: '6 months', bucket: 'week', count: 26 },
+];
+const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const shortDate = (iso) => `${Number(iso.slice(5, 7))}/${Number(iso.slice(8, 10))}`;
+
+/**
+ * Chart buckets for a range, oldest first: [{ start, end (exclusive), label }].
+ * 1 week is the last 7 days, one bar per day; the others are calendar weeks
+ * (Monday first) ending with this week. offset 1 = the period before.
+ */
+export function buckets(rangeId, todayIso, offset = 0) {
+  const r = RANGES.find((x) => x.id === rangeId) || RANGES[2];
+  const out = [];
+  if (r.bucket === 'day') {
+    const last = addDays(todayIso, -offset * r.count);
+    for (let i = r.count - 1; i >= 0; i--) {
+      const d = addDays(last, -i);
+      out.push({ start: d, end: addDays(d, 1), label: DAY_LETTERS[weekdayIndex(d)] });
+    }
+  } else {
+    const lastWeek = addDays(weekStart(todayIso), -7 * offset * r.count);
+    for (let i = r.count - 1; i >= 0; i--) {
+      const w = addDays(lastWeek, -7 * i);
+      out.push({ start: w, end: addDays(w, 7), label: shortDate(w) });
+    }
+  }
+  return out;
+}
+
+export const MODES = ['total', 'workout', 'swim'];
+const inMode = (mode) => (x) => mode === 'total' || (mode === 'workout' ? x.kind === 'gym' : x.kind === 'swim');
+const sumOf = (list, fn) => list.reduce((acc, x) => acc + (fn(x) || 0), 0);
+const setCount = (x) => (x.exercises || []).reduce((n, ex) => n + workingSets(ex).length, 0);
+
+/** Headline numbers for a list of sessions in one mode. */
+export function periodKpis(list, mode, { weightUnit = 'lb', poolUnit = 'yd' } = {}) {
+  const minutes = sumOf(list, (x) => (x.durationSec || 0) / 60);
+  if (mode === 'workout') {
+    return { count: list.length, volume: sumOf(list, (x) => sessionVolume(x, weightUnit)), sets: sumOf(list, setCount), prs: sumOf(list, (x) => x.prs?.length), minutes };
+  }
+  if (mode === 'swim') {
+    const timed = list.filter((x) => x.durationSec && swimDistance(x, poolUnit));
+    return {
+      count: list.length, distance: sumOf(list, (x) => swimDistance(x, poolUnit)), minutes,
+      pace: pacePer100(sumOf(timed, (x) => swimDistance(x, poolUnit)), sumOf(timed, (x) => x.durationSec)),
+    };
+  }
+  return {
+    count: list.length, minutes, days: new Set(list.map((x) => x.date)).size,
+    gym: list.filter((x) => x.kind === 'gym').length, swim: list.filter((x) => x.kind === 'swim').length, other: list.filter((x) => x.kind === 'other').length,
+  };
+}
+
+/**
+ * Everything the Progress tab shows for one mode and range: the buckets with
+ * their chart values, this period's numbers and the previous period's.
+ * Total: value = sessions (split gym/swim/other); workout: volume; swim: distance.
+ */
+export function progressSummary(sessions, { mode = 'total', range = '12w', today, weightUnit = 'lb', poolUnit = 'yd' }) {
+  const cur = buckets(range, today);
+  const prev = buckets(range, today, 1);
+  const pick = inMode(mode);
+  const within = (b0, b1) => sessions.filter((x) => pick(x) && x.date >= b0.start && x.date < b1.end);
+  const list = within(cur[0], cur[cur.length - 1]);
+  const prevList = within(prev[0], prev[prev.length - 1]);
+  const units = { weightUnit, poolUnit };
+  const series = cur.map((b) => {
+    const inB = list.filter((x) => x.date >= b.start && x.date < b.end);
+    if (mode === 'workout') return { ...b, value: sumOf(inB, (x) => sessionVolume(x, weightUnit)) };
+    if (mode === 'swim') return { ...b, value: sumOf(inB, (x) => swimDistance(x, poolUnit)) };
+    return { ...b, value: inB.length, gym: inB.filter((x) => x.kind === 'gym').length, swim: inB.filter((x) => x.kind === 'swim').length, other: inB.filter((x) => x.kind === 'other').length };
+  });
+  return { mode, range, buckets: cur, series, list, now: periodKpis(list, mode, units), prev: periodKpis(prevList, mode, units) };
+}
+
+/** Sets per muscle group (gym sessions), most first. */
+export function setsByMuscleGroup(list) {
+  const counts = new Map();
+  for (const x of list) {
+    if (x.kind !== 'gym') continue;
+    for (const ex of x.exercises || []) {
+      const n = workingSets(ex).length;
+      if (!n) continue;
+      const group = getExercise(ex.ex)?.group || 'Other';
+      counts.set(group, (counts.get(group) || 0) + n);
+    }
+  }
+  return [...counts.entries()].map(([group, sets]) => ({ group, sets })).sort((a, b) => b.sets - a.sets);
+}
+
+/** Distance swum per stroke from the reps actually done (plus lap-counter lengths), most first. */
+export function swimDistanceByStroke(list, poolUnit) {
+  const totals = new Map();
+  const add = (label, d) => { if (d > 0) totals.set(label, (totals.get(label) || 0) + d); };
+  for (const x of list) {
+    if (x.kind !== 'swim') continue;
+    const from = x.pool?.unit;
+    for (const b of x.blocks || []) {
+      for (const it of b.items || []) {
+        if (!it.dist) continue;
+        const done = (it.done || []).filter(Boolean).length;
+        add(STROKES[it.stroke] || it.stroke || 'Other', convertDistance(it.dist * done, from, poolUnit));
+      }
+    }
+    if (x.freeLengths) add('Lap counter', convertDistance(x.freeLengths * (x.pool?.len || 25), from, poolUnit));
+  }
+  return [...totals.entries()].map(([stroke, distance]) => ({ stroke, distance })).sort((a, b) => b.distance - a.distance);
+}
+
+/** Longest run of weeks with at least `min` sessions, and the busiest week. */
+export function weekRecords(sessions, min = 2) {
+  const counts = new Map();
+  for (const x of sessions) {
+    const w = weekStart(x.date);
+    counts.set(w, (counts.get(w) || 0) + 1);
+  }
+  const weeks = [...counts.keys()].sort();
+  let longest = 0;
+  let run = 0;
+  let busiest = null;
+  if (weeks.length) {
+    for (let w = weeks[0]; w <= weeks[weeks.length - 1]; w = addDays(w, 7)) {
+      const n = counts.get(w) || 0;
+      run = n >= min ? run + 1 : 0;
+      longest = Math.max(longest, run);
+      if (n && (!busiest || n > busiest.count)) busiest = { week: w, count: n };
+    }
+  }
+  return { longestStreak: longest, busiest };
 }
 
 /** Pace per 100 (yd or m) in seconds, or null. */

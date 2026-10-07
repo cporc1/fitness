@@ -2,7 +2,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { e1rm, platesPerSide, weekStreak, nutritionTargets, detectPRs, weekSummary, convertDistance } from '../js/stats.js';
+import {
+  e1rm, platesPerSide, weekStreak, nutritionTargets, detectPRs, weekSummary, convertDistance,
+  buckets, progressSummary, setsByMuscleGroup, swimDistanceByStroke, weekRecords,
+} from '../js/stats.js';
 import {
   programWeek, currentPhase, defaultSchedule, nextGymTemplate, nextSwimWorkout, suggest,
   buildGymSession, buildSwimSession, computeSwimDistance, planForDay,
@@ -283,4 +286,70 @@ test('demo media points at real exercises and files', async () => {
     assert.ok(getExercise(id) || getDrill(id), `video for unknown id ${id}`);
     assert.match(v.id, /^[A-Za-z0-9_-]{11}$/, `bad video id for ${id}`);
   }
+});
+
+test('progress ranges: 7 daily bars or calendar weeks ending this week', () => {
+  const day = buckets('1w', '2026-10-07');
+  assert.equal(day.length, 7);
+  assert.equal(day[0].start, '2026-10-01');
+  assert.equal(day[6].start, '2026-10-07');
+  assert.equal(day[6].label, 'W');
+  const wk = buckets('8w', '2026-10-07');
+  assert.equal(wk.length, 8);
+  assert.equal(wk[7].start, '2026-10-05');
+  assert.equal(wk[0].start, '2026-08-17');
+  assert.equal(wk[7].label, '10/5');
+  assert.equal(buckets('6m', '2026-10-07').length, 26);
+  assert.equal(buckets('12w', '2026-10-07', 1)[11].end, buckets('12w', '2026-10-07')[0].start);
+});
+
+test('progress totals match the chart buckets', () => {
+  const swim = (id, date, distance) => ({ id, kind: 'swim', date, distance, durationSec: 1200, pool: { len: 25, unit: 'yd' } });
+  const sessions = [
+    gymSession('g1', '2026-10-05', 'leg-press', [[100, 10], [100, 10]]),
+    gymSession('g2', '2026-09-29', 'leg-press', [[90, 12]]),
+    swim('s1', '2026-10-06', 500), swim('s2', '2026-06-01', 400),
+    { id: 'o1', kind: 'other', date: '2026-10-02', durationSec: 1800 },
+  ];
+  const total = progressSummary(sessions, { mode: 'total', range: '12w', today: '2026-10-07' });
+  assert.equal(total.now.count, total.series.reduce((a, b) => a + b.value, 0));
+  assert.equal(total.now.count, 4); // the June swim is outside 12 weeks
+  assert.equal(total.series.reduce((a, b) => a + b.gym + b.swim + b.other, 0), 4);
+  const lift = progressSummary(sessions, { mode: 'workout', range: '8w', today: '2026-10-07' });
+  assert.equal(lift.now.volume, lift.series.reduce((a, b) => a + b.value, 0));
+  assert.equal(lift.now.volume, 2000 + 1080);
+  assert.equal(lift.now.sets, 3);
+  const pool = progressSummary(sessions, { mode: 'swim', range: '1w', today: '2026-10-07' });
+  assert.equal(pool.now.distance, 500);
+  assert.equal(pool.series[5].value, 500); // Tuesday Oct 6
+  assert.equal(pool.now.pace, 240);
+});
+
+test('progress compares with the previous period across a month boundary', () => {
+  const sessions = [
+    gymSession('a', '2026-09-25', 'leg-press', [[100, 10]]),
+    gymSession('b', '2026-09-30', 'leg-press', [[100, 10]]),
+    gymSession('c', '2026-10-02', 'leg-press', [[100, 10]]),
+  ];
+  const r = progressSummary(sessions, { mode: 'workout', range: '1w', today: '2026-10-03' });
+  assert.equal(r.buckets[0].start, '2026-09-27');
+  assert.equal(r.now.count, 2);
+  assert.equal(r.prev.count, 1);
+});
+
+test('sets per muscle group, distance per stroke, week records', () => {
+  const s1 = gymSession('a', '2026-10-05', 'leg-press', [[100, 10], [100, 10]]);
+  s1.exercises.push({ ex: 'lat-pulldown', type: 'weight', sets: [{ w: 50, r: 10, done: true }, { w: 50, r: 10, done: false }] });
+  const groups = setsByMuscleGroup([s1]);
+  assert.deepEqual(groups.map((g) => [g.group, g.sets]), [['Legs', 2], ['Back', 1]]);
+  const swim = {
+    id: 's', kind: 'swim', date: '2026-10-06', pool: { len: 25, unit: 'm' }, freeLengths: 2,
+    blocks: [{ name: 'Main set', items: [{ reps: 4, dist: 50, stroke: 'Free', done: [true, true, true, false] }, { reps: 2, dist: 25, stroke: 'Breast', done: [true, true] }] }],
+  };
+  const strokes = swimDistanceByStroke([swim], 'm');
+  assert.deepEqual(strokes.map((x) => [x.stroke, x.distance]), [['Freestyle', 150], ['Breaststroke', 50], ['Lap counter', 50]]);
+  const weeks = ['2026-09-07', '2026-09-08', '2026-09-14', '2026-09-15', '2026-09-28', '2026-09-29', '2026-09-30'];
+  const rec = weekRecords(weeks.map((date, i) => ({ id: String(i), kind: 'gym', date })));
+  assert.equal(rec.longestStreak, 2);
+  assert.equal(rec.busiest.count, 3);
 });

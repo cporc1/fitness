@@ -510,23 +510,45 @@ textarea.input { min-height: 88px; resize: vertical; line-height: 1.4; }
 .drill-link { border: 0; background: none; padding: 0; color: var(--pool); font-weight: 600; font-size: var(--fs-sm); cursor: pointer; text-align: left; }
 
 /* ---------- sheets, dialogs, toasts ---------- */
-.scrim { position: fixed; inset: 0; z-index: 60; background: rgba(5, 12, 16, .45); display: flex; align-items: flex-end; justify-content: center; animation: fade .18s ease; }
-.sheet {
-  width: 100%; max-width: 640px; max-height: 92vh; max-height: 92dvh; overflow: auto; overscroll-behavior: contain;
-  background: var(--bg); border-radius: 22px 22px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
-  display: flex; flex-direction: column; gap: 14px; animation: rise .22s cubic-bezier(.2,.8,.2,1);
+.scrim {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(5, 12, 16, calc(.42 * var(--scrim, 1))); animation: fade .25s ease; touch-action: none;
 }
-.sheet .grabber { width: 38px; height: 5px; border-radius: 3px; background: var(--line); margin: 4px auto 0; flex: none; }
+.sheet {
+  width: 100%; max-width: 640px; max-height: 92vh; max-height: 92dvh; display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--bg) 93%, transparent);
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  border-radius: 24px 24px 0 0; outline: none;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, .18), inset 0 1px 0 var(--glass-edge);
+  /* "backwards" leaves no transform once open: an iframe inside a transformed
+     box can get a misplaced touch area on iOS. */
+  animation: sheet-in var(--dur-page) var(--ease-page) backwards;
+}
+.sheet-top { flex: none; padding: 6px 16px 4px; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.sheet .grabber { width: 38px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--muted) 45%, transparent); margin: 2px auto 6px; }
 .sheet-head { display: flex; align-items: center; gap: 8px; }
 .sheet-head h2 { flex: 1; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); }
+.sheet-body {
+  flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  padding: 8px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 14px;
+}
+html.reduce-transparency .sheet { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+@keyframes sheet-in { from { transform: translateY(100%); } }
 .dialog-scrim { align-items: center; padding: 16px; }
-.dialog { width: 100%; max-width: 380px; background: var(--surface); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; animation: pop .18s ease; }
+.dialog {
+  width: 100%; max-width: 380px; border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 14px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%); backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-edge);
+  animation: pop var(--dur-snappy) var(--ease-snappy);
+}
+html.reduce-transparency .dialog { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .dialog h2 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); }
 .toast-wrap { position: fixed; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 10px); z-index: 80; display: flex; justify-content: center; pointer-events: none; padding-inline: 16px; }
-.toast { pointer-events: auto; background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 14px; font-weight: 600; box-shadow: var(--shadow); max-width: 480px; animation: drop .22s ease; }
+.toast { pointer-events: auto; background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 14px; font-weight: 600; box-shadow: var(--shadow); max-width: 480px; animation: drop var(--dur-snappy) var(--ease-snappy); }
 @keyframes fade { from { opacity: 0; } }
-@keyframes rise { from { transform: translateY(40px); opacity: .4; } }
-@keyframes pop { from { transform: scale(.96); opacity: 0; } }
+@keyframes pop { from { transform: scale(.94); opacity: 0; } }
 @keyframes drop { from { transform: translateY(-12px); opacity: 0; } }
 
 /* ---------- library & learn ---------- */

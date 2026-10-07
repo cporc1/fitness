@@ -233,6 +233,9 @@ registerRoute('settings', (_p, state) => {
   const restC = input({ id: 'st-rc', inputmode: 'numeric', value: st.restCompound ?? 120, onchange: (e) => setSettings({ restCompound: toNumber(e.target.value) || 120 }) });
   const restI = input({ id: 'st-ri', inputmode: 'numeric', value: st.restIsolation ?? 75, onchange: (e) => setSettings({ restIsolation: toNumber(e.target.value) || 75 }) });
   const poolKey = `${p.pool?.len || 25}${p.pool?.unit || 'yd'}`;
+  const optIn = (label, key, sub) => h('label', { class: 'check-row' },
+    h('input', { type: 'checkbox', id: `st-${key}`, checked: st[key] === true, onchange: (e) => setSettings({ [key]: e.target.checked || undefined }) }),
+    h('span', { class: 'grow' }, h('div', { style: { fontWeight: 600 } }, label), sub ? h('div', { class: 'small muted' }, sub) : null));
   const toggle = (label, key, sub) => h('label', { class: 'check-row' },
     h('input', { type: 'checkbox', id: `st-${key}`, checked: st[key] !== false, onchange: (e) => setSettings({ [key]: e.target.checked }) }),
     h('span', { class: 'grow' }, h('div', { style: { fontWeight: 600 } }, label), sub ? h('div', { class: 'small muted' }, sub) : null));
@@ -264,7 +267,9 @@ registerRoute('settings', (_p, state) => {
           h('div', { class: 'small muted' }, 'Show body weight, measurements, water and sleep tracking. Off keeps the app focused on workouts and swims.')))),
     h('div', { class: 'card' },
       h('div', { class: 'field' }, h('span', { class: 'label' }, 'Appearance'),
-        segmented([{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], st.theme || 'auto', (v) => setSettings({ theme: v }), 'Theme'))));
+        segmented([{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], st.theme || 'auto', (v) => setSettings({ theme: v }), 'Theme')),
+      optIn('Reduce motion', 'reduceMotion', 'Screens change without sliding or bouncing. The app also follows your iPhone\'s Reduce Motion setting.'),
+      optIn('Reduce transparency', 'reduceTransparency', 'Solid backgrounds instead of frosted glass.')));
 });
 
 // ---------------- data ----------------

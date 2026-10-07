@@ -265,4 +265,58 @@ test('screen changes animate unless motion is reduced', async ({ newPage, open, 
   check('Reduce motion marks <html>', await inApp.evaluate(() => document.documentElement.classList.contains('reduce-motion')));
 });
 
+test('sheets: drag to dismiss, snap back, escape, glass settings', async ({ newPage, open, check, shot }) => {
+  const page = await newPage({ motion: true });
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  const openPicker = async () => {
+    await page.getByRole('button', { name: 'Start a different workout' }).click();
+    await page.locator('.sheet').waitFor();
+    await page.waitForTimeout(500); // let it finish sliding up
+  };
+  const dragTop = async (dy) => {
+    const box = await page.locator('.sheet-top').boundingBox();
+    const x = box.x + box.width / 2;
+    const y = box.y + 8;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) { await page.mouse.move(x, y + (dy * i) / 8); await page.waitForTimeout(16); }
+    await page.mouse.up();
+  };
+  await openPicker();
+  await shot(page, 'sheet-open', false);
+  check('Open sheet has no leftover transform', await page.locator('.sheet').evaluate((el) => getComputedStyle(el).transform === 'none'));
+  await dragTop(60);
+  await page.waitForTimeout(450);
+  check('A short drag snaps back', (await page.locator('.sheet').count()) === 1 && await page.locator('.sheet').evaluate((el) => getComputedStyle(el).transform === 'none'));
+  const h = (await page.locator('.sheet').boundingBox()).height;
+  await dragTop(h * 0.5);
+  await page.locator('.scrim').waitFor({ state: 'detached' });
+  check('Dragging past a third closes it', true);
+  check('Page scrolls again after closing', await page.evaluate(() => document.body.style.overflow === ''));
+
+  await openPicker();
+  // Touch drag on the content while it's scrolled to the top.
+  await page.locator('.sheet-body').evaluate(async (body) => {
+    const fire = (type, y) => {
+      const t = new Touch({ identifier: 1, target: body, clientX: 200, clientY: y });
+      body.dispatchEvent(new TouchEvent(type, { touches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true }));
+    };
+    fire('touchstart', 300);
+    for (let i = 1; i <= 10; i++) { fire('touchmove', 300 + i * 45); await new Promise((r) => setTimeout(r, 16)); }
+    fire('touchend', 750);
+  });
+  await page.locator('.scrim').waitFor({ state: 'detached' });
+  check('Pulling the content down from the top closes it', true);
+
+  await openPicker();
+  await page.keyboard.press('Escape');
+  await page.locator('.scrim').waitFor({ state: 'detached' });
+  check('Escape closes the sheet', true);
+
+  await open(page, { profile: PROFILE, schedule: WEEK, settings: { reduceTransparency: true } });
+  await page.getByRole('button', { name: 'Start a different workout' }).click();
+  const bf = await page.locator('.sheet').evaluate((el) => getComputedStyle(el).backdropFilter);
+  check('Reduce transparency turns the glass solid', bf === 'none', bf);
+});
+
 await run();

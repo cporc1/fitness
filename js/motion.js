@@ -19,3 +19,14 @@ export function applyMotionPrefs(settings) {
   root.classList.toggle('reduce-motion', settings?.reduceMotion === true);
   root.classList.toggle('reduce-transparency', settings?.reduceTransparency === true);
 }
+
+const easings = {};
+/** A spring easing from the CSS tokens (--ease-<name>), usable with element.animate(). */
+export function easing(name, fallback = 'cubic-bezier(.2, .8, .2, 1)') {
+  if (!(name in easings)) {
+    let v = '';
+    try { v = getComputedStyle(document.documentElement).getPropertyValue(`--ease-${name}`).trim(); } catch { /* no DOM */ }
+    easings[name] = v && window.CSS?.supports?.('transition-timing-function', v) ? v : fallback;
+  }
+  return easings[name];
+}

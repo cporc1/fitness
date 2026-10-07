@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** v2, the pre-revamp app.
-- **Next up:** checkpoint 0.3.
+- **Next up:** Phase 0 pull request, then checkpoint 1.1.
 
 ## Checkpoints
 
@@ -38,7 +38,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Page changes go through `history.pushState`, so iOS swipe-back works. Tab switches unwind history.
   - Page and tab changes animate with view transitions.
   - `app.js` re-exports `go`, `back`, `replace` and `tab`, so views don't change.
-- [ ] **0.3 Sheets and tokens.**
+- [x] **0.3 Sheets and tokens.**
   - Sheets: drag-to-dismiss, animated open and close, glass surface.
   - Tokens: glass and spring-motion tokens in CSS, plus `js/motion.js` (`reducedMotion()`).
   - Settings → Appearance gets Reduce motion and Reduce transparency.
@@ -99,3 +99,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: Plan reviewed and approved with changes (plan section 0). Checkpoints written.
 - 2026-10-07: 0.1 done. `npm run test:e2e` runs 4 flows (39 checks) in about 7 seconds; CI runs it too.
 - 2026-10-07: 0.2 done. `js/router.js` keeps per-tab stacks in step with history (`{ ll: depth }` entries); tab switches unwind with `history.go(-depth)`. Transitions are view transitions keyed by `html[data-vt]`. Finishing a session now *replaces* the live screen with its summary. 6 e2e flows pass.
+- 2026-10-07: 0.3 done. `sheet()` in `js/ui.js` keeps its signature and now returns `{ close, panel, body }`. It drags to dismiss (grabber/header, or content at scroll top), animates out, closes the top sheet on Escape and returns focus. Settings → Appearance has Reduce motion and Reduce transparency (`settings.reduceMotion` / `reduceTransparency`, `html.reduce-*` classes). 7 e2e flows pass.

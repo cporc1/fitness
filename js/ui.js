@@ -1,7 +1,8 @@
 // Reusable UI pieces: sheets, confirm dialogs, toasts and form controls.
 // (The claude.ai viewer blocks alert/confirm/prompt, so dialogs are built in-page.)
 
-import { h, icon, ICONS } from './util.js';
+import { h, icon, ICONS, put } from './util.js';
+import { reducedMotion, easing } from './motion.js';
 
 const root = () => document.getElementById('overlay-root');
 
@@ -11,33 +12,114 @@ function lockScroll(on) {
   document.body.style.overflow = openSheets > 0 ? 'hidden' : '';
 }
 
+const sheetStack = []; // Escape closes only the top sheet
+const DISMISS_FRACTION = 0.3; // drag past 30% of the height to close
+const FLICK_SPEED = 0.6; // or flick down faster than this (px/ms)
+
+function translateY(el) {
+  const t = getComputedStyle(el).transform;
+  return t && t !== 'none' ? new DOMMatrixReadOnly(t).m42 : 0;
+}
+
 /**
- * Bottom sheet. content: Node or (close) => Node.
- * Returns { close }.
+ * Bottom sheet, sized to its content up to 92% of the screen. It slides up,
+ * and drags down to close: by the grabber or header, or by the content once
+ * it's scrolled to the top. content: Node or (close) => Node.
+ * Returns { close, panel, body }.
  */
 export function sheet(title, content, { onClose } = {}) {
   let closed = false;
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    scrim.remove();
-    lockScroll(false);
-    document.removeEventListener('keydown', onKey);
-    onClose?.();
-  };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
-  const body = typeof content === 'function' ? content(close) : content;
-  const panel = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
-    h('div', { class: 'grabber' }),
+  const opener = document.activeElement;
+  const body = h('div', { class: 'sheet-body' });
+  const top = h('div', { class: 'sheet-top' },
+    h('div', { class: 'grabber', 'aria-hidden': 'true' }),
     h('div', { class: 'sheet-head' },
       h('h2', null, title),
-      h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: close }, icon(ICONS.close))),
-    body);
+      h('button', { class: 'icon-btn', 'aria-label': 'Close', onclick: () => close() }, icon(ICONS.close))));
+  const panel = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, tabindex: '-1' }, top, body);
   const scrim = h('div', { class: 'scrim', onclick: (e) => { if (e.target === scrim) close(); } }, panel);
+  const me = { close };
+
+  function close() {
+    if (closed) return;
+    closed = true;
+    sheetStack.splice(sheetStack.indexOf(me), 1);
+    document.removeEventListener('keydown', onKey);
+    const finish = () => {
+      scrim.remove();
+      lockScroll(false);
+      onClose?.();
+      if (opener?.isConnected && !sheetStack.length) opener.focus?.({ preventScroll: true });
+    };
+    if (reducedMotion()) { finish(); return; }
+    const from = translateY(panel);
+    panel.style.transform = '';
+    panel.animate([{ transform: `translateY(${from}px)` }, { transform: 'translateY(100%)' }], { duration: 260, easing: 'cubic-bezier(.4, 0, .9, .6)', fill: 'forwards' });
+    scrim.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: 'ease-in', fill: 'forwards' }).finished.then(finish, finish);
+  }
+  const onKey = (e) => { if (e.key === 'Escape' && sheetStack[sheetStack.length - 1] === me) close(); };
+
+  // ----- dragging -----
+  let drag = null;
+  function dragStart(y) {
+    for (const a of panel.getAnimations()) a.cancel();
+    drag = { startY: y, lastY: y, lastT: performance.now(), v: 0, dy: 0 };
+  }
+  function dragMove(y) {
+    const now = performance.now();
+    const raw = y - drag.startY;
+    drag.dy = raw >= 0 ? raw : -Math.sqrt(-raw) * 2; // rubber-band when pulled up
+    drag.v = (y - drag.lastY) / Math.max(1, now - drag.lastT);
+    drag.lastY = y;
+    drag.lastT = now;
+    panel.style.transform = `translateY(${drag.dy}px)`;
+    scrim.style.setProperty('--scrim', String(1 - Math.min(1, Math.max(0, drag.dy) / panel.offsetHeight)));
+  }
+  function dragEnd() {
+    const { dy, v } = drag;
+    drag = null;
+    if (dy > panel.offsetHeight * DISMISS_FRACTION || (v > FLICK_SPEED && dy > 10)) { close(); return; }
+    panel.style.transform = '';
+    scrim.style.removeProperty('--scrim');
+    if (!reducedMotion()) panel.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], { duration: 320, easing: easing('snappy') });
+  }
+  top.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    top.setPointerCapture?.(e.pointerId);
+    dragStart(e.clientY);
+  });
+  top.addEventListener('pointermove', (e) => { if (drag) dragMove(e.clientY); });
+  top.addEventListener('pointerup', () => { if (drag) dragEnd(); });
+  top.addEventListener('pointercancel', () => { if (drag) dragEnd(); });
+  // The content drags the sheet only when it's already scrolled to the top.
+  let touch = null;
+  body.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    touch = { x: t.clientX, y: t.clientY, atTop: body.scrollTop <= 0 };
+  }, { passive: true });
+  body.addEventListener('touchmove', (e) => {
+    if (!touch || e.touches.length > 1) return;
+    const t = e.touches[0];
+    if (!drag) {
+      const dy = t.clientY - touch.y;
+      const dx = t.clientX - touch.x;
+      if (!touch.atTop || body.scrollTop > 0 || dy < 8 || Math.abs(dx) > dy) return;
+      dragStart(touch.y);
+    }
+    e.preventDefault();
+    dragMove(t.clientY);
+  }, { passive: false });
+  const endTouch = () => { touch = null; if (drag) dragEnd(); };
+  body.addEventListener('touchend', endTouch);
+  body.addEventListener('touchcancel', endTouch);
+
+  put(body, typeof content === 'function' ? content(close) : content);
   root().append(scrim);
+  sheetStack.push(me);
   lockScroll(true);
   document.addEventListener('keydown', onKey);
-  return { close, panel };
+  panel.focus({ preventScroll: true });
+  return { close, panel, body };
 }
 
 /** Promise<boolean> confirmation dialog. */

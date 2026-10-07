@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** Phases 0–3 (everything except the Phase 4 polish).
-- **Next up:** checkpoint 4.2.
+- **Next up:** Phase 4 pull request. After that the revamp is complete.
 
 ## Checkpoints
 
@@ -88,7 +88,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Ambient background, swim caustics and the gym sheen.
   - Collapsing large titles and the black-translucent status bar.
   - Card-stack scaling behind sheets.
-- [ ] **4.2 Quality pass.**
+- [x] **4.2 Quality pass.**
   - Accessibility: contrast and reduce motion.
   - Performance: at most 3 blur layers.
   - A dark-mode pass.
@@ -115,3 +115,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Collapsing titles: tab roots get `.mini-title`; pushed pages fill `.topbar .title` from their heading (`html.title-collapsed`).
   - Kept the default status bar: `black-translucent` forces white status text, which is unreadable on the light theme. Revisit on a real device.
   - SW v6.
+- 2026-10-07: 4.2 done:
+  - New `tests/contrast.test.mjs` checks WCAG AA (4.5:1) for every text/background token pair in light and dark mode. Fixes: `--muted` `#5e6e76`, `--pool` `#09709a`, `--iron` `#b16009`, plus new `--iron-ink` and `--good-ink` for text on tinted chips.
+  - A new e2e flow checks ≤ 3 blur layers (scrolled tab, open sheet, resting in a workout), the card stack opening and closing, and that nothing loops with Reduce motion.
+  - Dark mode: selected segments use `--pill`.

@@ -549,4 +549,45 @@ test('finishing with nothing ticked asks first', async ({ newPage, open, check }
   check('Save anyway still saves and celebrates', true);
 });
 
+test('quality: at most 3 blur layers, reduce motion stops every loop', async ({ newPage, open, check }) => {
+  const blurLayers = (page) => page.evaluate(() => [...document.querySelectorAll('*')].filter((el) => {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    return (cs.backdropFilter && cs.backdropFilter !== 'none') && cs.visibility !== 'hidden' && cs.display !== 'none' && r.width > 0 && r.height > 0;
+  }).map((el) => el.className.split(' ')[0]));
+  const loops = (page) => page.evaluate(() => document.getAnimations().filter((a) => a.playState === 'running' && a.effect?.getComputedTiming().iterations === Infinity).length);
+  const page = await newPage({ motion: true });
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  await page.waitForTimeout(400);
+  check('Motion on: ambient light and water keep moving', (await loops(page)) > 0);
+  await page.evaluate(() => window.scrollTo(0, 500));
+  await page.waitForTimeout(300);
+  let layers = await blurLayers(page);
+  check('Today scrolled: ≤ 3 blur layers', layers.length <= 3, layers.join(', '));
+  await page.getByRole('button', { name: 'Start a different workout' }).click();
+  await page.waitForTimeout(500);
+  layers = await blurLayers(page);
+  check('Today with a sheet: ≤ 3 blur layers', layers.length <= 3, layers.join(', '));
+  check('The page shrinks behind the sheet', await page.evaluate(() => document.documentElement.classList.contains('sheet-open')));
+  await page.keyboard.press('Escape');
+  await page.locator('.scrim').waitFor({ state: 'detached' });
+  await page.waitForTimeout(500);
+  check('…and grows back after', await page.evaluate(() => !document.documentElement.className.match(/sheet-(open|closing)/)));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
+  await page.locator('.ex-card').first().locator('.set-check').first().click();
+  await page.waitForTimeout(300);
+  layers = await blurLayers(page);
+  check('Live workout resting: ≤ 3 blur layers', layers.length <= 3, layers.join(', '));
+
+  const still = await newPage();
+  await open(still, { profile: PROFILE, schedule: WEEK });
+  await still.waitForTimeout(300);
+  check('Reduce motion (iPhone): nothing loops', (await loops(still)) === 0);
+  const inApp = await newPage({ motion: true });
+  await open(inApp, { profile: PROFILE, schedule: WEEK, settings: { reduceMotion: true } });
+  await inApp.waitForTimeout(300);
+  check('Reduce motion (Settings): nothing loops', (await loops(inApp)) === 0);
+});
+
 await run();

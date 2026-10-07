@@ -1,7 +1,7 @@
 // Offline support: precache the app shell, serve it cache-first and refresh
 // in the background. Bump VERSION when shipping changes.
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `liftlap-${VERSION}`;
 const FONT_CACHE = 'liftlap-fonts';
 
@@ -24,10 +24,12 @@ const SHELL = [
   'js/stats.js',
   'js/program.js',
   'js/actions.js',
+  'js/media.js',
   'js/data/exercises.js',
   'js/data/plans.js',
   'js/data/swim.js',
   'js/data/guides.js',
+  'js/data/media.js',
   'js/views/onboarding.js',
   'js/views/today.js',
   'js/views/plan.js',

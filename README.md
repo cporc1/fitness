@@ -6,19 +6,22 @@ A phone-first training app for a beginner with a full gym and a lap pool: a 12-w
 
 | Area | What you get |
 | --- | --- |
-| **Today** | What to do today, a week strip, a one-tap start, weekly stats, streak, and a daily check-in (water, sleep, protein, body weight) |
-| **Plan** | The 12-week program in three phases (Foundation → Build → Progress), your editable weekly schedule (gym / swim / rest per day), every workout in the current phase, and a builder for your own gym or swim workouts |
+| **Today** | What to do today (one card per session; gym + swim days show both, in order), a week strip, a one-tap start, weekly stats and streak. Optional daily check-in (water, sleep, protein, body weight) behind Settings → Body & daily habits |
+| **Plan** | The 12-week program in three phases (Foundation → Build → Progress), your editable weekly schedule (gym / swim / gym + swim / rest per day), full-body or upper/lower program, every workout in the current phase (tap any exercise for its demo), and a builder for your own gym or swim workouts |
 | **Gym logger** | Sets × weight × reps with last session's numbers alongside, automatic weight suggestions (double progression), a rest timer drawn as a pool pace clock, exercise swaps (today only or permanently), how-to for every exercise, warm-up checklist, PR detection |
-| **Swim logger** | Warm-up / drills / main set / cool-down with a big "Rep done" button, automatic rest countdown, drill instructions, distance tracking in your pool's units (25 yd, 25 m or 50 m), and a free-swim lap counter |
+| **Swim logger** | Warm-up / drills / main set / cool-down with a big "Rep done" button, automatic rest countdown, stroke and drill how-tos with video, distance tracking in your pool's units (25 yd, 25 m or 50 m), a free-swim lap counter, and a Simple mode (just freestyle, breaststroke and kickboard) |
 | **Log** | Calendar and list of every session, details, edit and delete, plus "log another activity" for walks, classes and sports |
 | **Progress** | Workouts per week, estimated 1-rep max per lift, weekly volume, swim distance and pace, body weight and waist trends, milestones |
-| **More** | 12 beginner guides, a library of 50 gym exercises and 15 swim drills with step-by-step instructions and demo-video links, tools (plate calculator, 1RM, swim pace, calories & protein), habits history, settings, backup/restore |
+| **Library** | 50 gym exercises with looping start/finish demo photos, an in-app demo video, step-by-step instructions, and "Find it in the gym" (other names the machine goes by and what it looks like); 4 swim strokes and 15 drills with in-app videos |
+| **More** | 12 beginner guides, tools (plate calculator, 1RM, swim pace, calories & protein), settings, backup/restore and "Delete all data" to start over after a test run |
 
 ### The program
 
-- **Gym:** two alternating full-body days (A and B). Weeks 1–4 use machines and dumbbells; weeks 5–8 introduce the squat and trap-bar deadlift with light weights; weeks 9–12 go heavier. Every exercise has a rep range; when you hit the top of the range on every set, the app tells you to add weight next time.
-- **Pool:** alternating technique and endurance swims, matched to your level: *learning to swim* (shallow-end water confidence), *beginner* (1–2 lengths then rest) or *comfortable* (200+ continuous). Distances adapt to your pool length.
-- **Week:** you choose the days; program days pick the next session automatically, so a missed day never breaks the plan.
+- **Gym:** two alternating full-body days (A and B), or Upper / Lower for 4+ gym days a week. Weeks 1–4 use machines and dumbbells; weeks 5–8 introduce the squat and trap-bar deadlift with light weights; weeks 9–12 go heavier. Every exercise has a rep range; when you hit the top of the range on every set, the app suggests the next weight (the next real dumbbell size, one pin on a machine, 5 lb / 2.5 kg on a barbell).
+- **Pool:** alternating technique and endurance swims, matched to your level: *learning to swim* (standing-depth water confidence, never full lengths), *beginner* (25–50 then rest) or *comfortable* (200+ continuous). Distances adapt to your pool length; in a 50 m pool rests grow with the longer swims.
+- **Week:** you choose the days and whether each is gym, swim or both; program days pick the next session automatically, so a missed day never breaks the plan.
+
+Demo photos come from [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (public domain). Videos are embedded from YouTube creators credited under each one, and play inside the app.
 
 ## Using it on your iPhone
 

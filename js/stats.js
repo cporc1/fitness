@@ -195,24 +195,32 @@ export function bmr({ weightKg, heightCm, age, sex }) {
 }
 
 export const ACTIVITY = [
-  { id: 'light', label: 'Lightly active: desk job + 3 workouts/week', factor: 1.375 },
-  { id: 'moderate', label: 'Moderately active: 4–5 workouts/week', factor: 1.55 },
-  { id: 'very', label: 'Very active: hard training most days or active job', factor: 1.725 },
+  { id: 'light', label: 'Desk job + 2–4 workouts a week (most beginners)', factor: 1.375 },
+  { id: 'moderate', label: 'On your feet a lot, or 5–6 workouts a week', factor: 1.55 },
+  { id: 'very', label: 'Physical job plus hard training most days', factor: 1.725 },
 ];
 
-export function nutritionTargets({ weightKg, heightCm, age, sex, activity = 'moderate', goal = 'health' }) {
+export function nutritionTargets({ weightKg, heightCm, age, sex, activity = 'light', goal = 'health' }) {
   const b = bmr({ weightKg, heightCm, age, sex });
   if (!b) return null;
-  const factor = (ACTIVITY.find((a) => a.id === activity) || ACTIVITY[1]).factor;
+  const factor = (ACTIVITY.find((a) => a.id === activity) || ACTIVITY[0]).factor;
   const maintenance = b * factor;
-  const adjust = goal === 'lose' ? -400 : goal === 'muscle' ? 250 : 0;
+  const adjust = goal === 'lose' ? -Math.min(500, maintenance * 0.2) : goal === 'muscle' ? 250 : 0;
+  // Never suggest eating below resting needs or common minimums.
+  const floor = Math.max(b * 1.1, sex === 'male' ? 1500 : 1200);
+  const raw = maintenance + adjust;
+  const floored = goal === 'lose' && raw < floor;
+  // With a high BMI, base protein on a healthier reference weight (BMI 25).
+  const hM = heightCm / 100;
+  const refKg = weightKg / (hM * hM) > 30 ? 25 * hM * hM : weightKg;
   return {
     bmr: round(b, 10),
     maintenance: round(maintenance, 10),
-    target: round(maintenance + adjust, 10),
-    proteinLow: Math.round(weightKg * 1.6),
-    proteinHigh: Math.round(weightKg * 2.2),
-    waterLiters: round(weightKg * 0.035, 0.1),
+    target: round(floored ? Math.min(maintenance, floor) : raw, 10),
+    floored,
+    proteinLow: Math.round(refKg * 1.6),
+    proteinHigh: Math.round(refKg * 2.2),
+    waterLiters: Math.min(3.7, round(weightKg * 0.03, 0.1)),
   };
 }
 

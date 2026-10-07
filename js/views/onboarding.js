@@ -2,6 +2,7 @@ import * as store from '../store.js';
 import { h, icon, ICONS, todayISO, WEEKDAYS_SHORT, WEEKDAYS_LONG } from '../util.js';
 import { render, registerRoute } from '../app.js';
 import { SWIM_LEVELS } from '../data/swim.js';
+import { SPLITS } from '../data/plans.js';
 import { segmented, input, field } from '../ui.js';
 
 const GOALS = [
@@ -19,16 +20,38 @@ const POOLS = [
 
 const DEFAULT_PICKS = { 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 2, 4, 5], 6: [0, 1, 2, 3, 4, 5] };
 
-const draft = {
-  step: 0, name: '', units: 'lb', goal: 'health', pool: POOLS[0], swimLevel: 'novice',
+const freshDraft = () => ({
+  step: 0, name: '', units: 'lb', goal: 'health', pool: POOLS[0], swimLevel: 'novice', swimMode: 'full', split: null,
   days: [...DEFAULT_PICKS[4]], kinds: null,
-};
+});
+const draft = freshDraft();
+
+/** Forget anything typed during setup, so a later reset starts at step 1. */
+export function resetOnboarding() {
+  Object.assign(draft, freshDraft());
+}
 
 function assignKinds(days) {
   const sorted = [...days].sort((a, b) => a - b);
   const out = {};
-  sorted.forEach((d, i) => { out[d] = i % 2 === 0 ? 'gym' : 'swim'; });
+  // With only 1–2 days, do both on each day so you still lift twice a week.
+  sorted.forEach((d, i) => { out[d] = sorted.length <= 2 ? 'both' : i % 2 === 0 ? 'gym' : 'swim'; });
   return out;
+}
+
+const KIND_LABEL = { gym: 'Gym', swim: 'Swim', both: 'Gym + Swim' };
+const NEXT_KIND = { gym: 'swim', swim: 'both', both: 'gym' };
+
+function countKinds(kinds) {
+  const vals = Object.values(kinds);
+  return {
+    gym: vals.filter((k) => k === 'gym' || k === 'both').length,
+    swim: vals.filter((k) => k === 'swim' || k === 'both').length,
+  };
+}
+
+function recommendedSplit(kinds) {
+  return countKinds(kinds).gym >= 4 ? 'upper-lower' : 'full';
 }
 
 function choice(title, sub, pressed, onclick) {
@@ -44,8 +67,11 @@ function finish() {
   store.set('profile', {
     name: draft.name.trim(), units: draft.units, goal: draft.goal,
     pool: { len: draft.pool.len, unit: draft.pool.unit }, swimLevel: draft.swimLevel,
+    split: draft.split || recommendedSplit(kinds),
     startDate: todayISO(), onboarded: true, createdAt: new Date().toISOString(),
   });
+  store.update('settings', (x) => ({ ...x, swimMode: draft.swimMode }));
+  resetOnboarding();
 }
 
 function stepWelcome() {
@@ -86,6 +112,12 @@ function stepPool() {
     h('div', { class: 'field' },
       h('span', { class: 'label' }, 'Swimming right now'),
       h('div', { class: 'choice-grid' }, SWIM_LEVELS.map((l) => choice(l.name, l.desc, draft.swimLevel === l.id, () => { draft.swimLevel = l.id; render(); })))),
+    draft.swimLevel !== 'learner' ? h('div', { class: 'field' },
+      h('span', { class: 'label' }, 'Swim workouts'),
+      h('div', { class: 'choice-grid' },
+        choice('Simple', 'Just freestyle, breaststroke and a kickboard. No technique drills.', draft.swimMode === 'simple', () => { draft.swimMode = 'simple'; render(); }),
+        choice('With technique drills', 'Adds short drills that improve your stroke faster. Each one has a how-to video.', draft.swimMode === 'full', () => { draft.swimMode = 'full'; render(); })),
+      h('div', { class: 'hint' }, 'You can switch any time in Settings.')) : null,
     draft.swimLevel === 'learner'
       ? h('div', { class: 'callout warn' }, 'Your swim sessions stay in the shallow end and build water confidence. Swim only when a lifeguard is on duty, and consider a few adult lessons. They speed things up a lot.')
       : null,
@@ -113,27 +145,33 @@ function stepSchedule() {
         draft.kinds = null;
         render();
       }, 'Days per week'),
-      h('div', { class: 'hint' }, '4 is a great start: 2 gym + 2 swim. You can change this any time.')),
-    h('div', { class: 'field' }, h('span', { class: 'label' }, 'Which days?'), picker),
+      h('div', { class: 'hint' }, '4 is a great start: 2 gym + 2 swim. Short on time? Pick 2 and do the gym and the pool on the same day.')),
+    h('div', { class: 'field' }, h('span', { class: 'label' }, 'Which days?'), picker,
+      sorted.length ? h('div', { class: 'hint' }, 'Tap a day below to switch it between Gym, Swim and Gym + Swim.') : null),
     sorted.length
       ? h('div', { class: 'card flush' }, h('div', { class: 'list' }, sorted.map((d) => {
         const k = kinds[d];
         return h('button', {
           class: 'list-item', type: 'button',
-          onclick: () => { draft.kinds = { ...kinds, [d]: k === 'gym' ? 'swim' : 'gym' }; render(); },
+          onclick: () => { draft.kinds = { ...kinds, [d]: NEXT_KIND[k] || 'gym' }; draft.split = null; render(); },
         },
-        h('span', { class: `chip ${k}` }, k === 'gym' ? 'Gym' : 'Swim'),
         h('div', { class: 'grow li-title' }, WEEKDAYS_LONG[d]),
-        h('span', { class: 'li-sub' }, 'Tap to switch'));
+        h('span', { class: `chip ${k}` }, KIND_LABEL[k]));
       })))
       : h('p', { class: 'muted' }, 'Pick at least one day.'),
+    sorted.length ? h('div', { class: 'field' },
+      h('span', { class: 'label' }, 'Gym program'),
+      h('div', { class: 'choice-grid' }, SPLITS.map((o) => {
+        const rec = recommendedSplit(kinds);
+        const current = draft.split || rec;
+        return choice(`${o.name}${o.id === rec ? ' · recommended' : ''}`, o.sub, current === o.id, () => { draft.split = o.id; render(); });
+      }))) : null,
   ];
 }
 
 function stepDone() {
   const kinds = draft.kinds || assignKinds(draft.days);
-  const gym = Object.values(kinds).filter((k) => k === 'gym').length;
-  const swim = Object.values(kinds).filter((k) => k === 'swim').length;
+  const { gym, swim } = countKinds(kinds);
   return [
     h('h1', null, draft.name ? `You're set, ${draft.name.trim()}.` : 'You\'re set.'),
     h('p', { class: 'ink-2', style: { fontSize: 'var(--fs-lg)' } },

@@ -62,6 +62,40 @@ test('gym days alternate A and B; swim days alternate technique and endurance', 
   assert.equal(nextSwimWorkout([{ kind: 'swim', templateId: 'swim:novice-p1-tech' }], 'novice', 1).key, 'novice-p1-endure');
 });
 
+test('gym + swim days and the upper/lower split', () => {
+  const schedule = { days: ['both', 'rest', 'gym', 'rest', 'swim', 'rest', 'rest'] };
+  const state = { profile: { startDate: '2026-10-05', swimLevel: 'novice' }, schedule, sessions: [], custom: { templates: [] } };
+  const mon = planForDay(state, '2026-10-05');
+  assert.equal(mon.slot, 'both');
+  assert.deepEqual(mon.parts.map((p) => p.kind), ['gym', 'swim']);
+  assert.equal(defaultSchedule(2).days.filter((d) => d === 'both').length, 2);
+  const ul = { kind: 'gym', templateId: 'p1-u' };
+  assert.equal(nextGymTemplate([], 1, 'upper-lower').id, 'p1-u');
+  assert.equal(nextGymTemplate([ul], 1, 'upper-lower').id, 'p1-l');
+  // a full-body history doesn't confuse the upper/lower rotation, and vice versa
+  assert.equal(nextGymTemplate([{ kind: 'gym', templateId: 'p1-a' }], 1, 'upper-lower').id, 'p1-u');
+  assert.equal(nextGymTemplate([ul], 1, 'full').id, 'p1-a');
+});
+
+test('learners never get full lengths; 50 m pools scale rest', async () => {
+  const { SWIM_WORKOUTS, expandForPool } = await import('../js/data/swim.js');
+  for (const [key, w] of Object.entries(SWIM_WORKOUTS)) {
+    if (!key.startsWith('learner')) continue;
+    for (const b of w.blocks) for (const it of b.items) assert.ok(!it.dist, `${key} has a distance item`);
+  }
+  const out = expandForPool([{ name: 'Main', items: [{ reps: 8, dist: 25, stroke: 'Free', rest: 40 }] }], 50, 'novice');
+  assert.deepEqual([out[0].items[0].reps, out[0].items[0].dist, out[0].items[0].rest], [4, 50, 80]);
+  assert.match(out[0].items[0].note, /lane rope/);
+});
+
+test('calorie target never drops below a safe floor', () => {
+  const t = nutritionTargets({ weightKg: 50, heightCm: 155, age: 55, sex: 'female', activity: 'light', goal: 'lose' });
+  assert.ok(t.target >= 1200);
+  assert.ok(t.target >= t.bmr);
+  const big = nutritionTargets({ weightKg: 136, heightCm: 178, age: 35, sex: 'male', activity: 'light', goal: 'lose' });
+  assert.ok(big.proteinHigh < 200, `protein ${big.proteinHigh}`);
+});
+
 test('schedule and day plan', () => {
   const schedule = defaultSchedule(4);
   assert.equal(schedule.days.filter((d) => d !== 'rest').length, 4);
@@ -96,6 +130,24 @@ test('double progression: add weight only after every set hits the top', () => {
   const down = suggest('leg-press', target, struggling, 'lb');
   assert.equal(down.kind, 'down');
   assert.ok(down.weight < 100);
+
+  // Below the range but improving: keep going, no back-off.
+  const improving = [
+    gymSession('b', '2026-10-03', 'lat-pulldown', [[60, 11], [60, 10], [60, 9]]),
+    gymSession('a', '2026-10-01', 'lat-pulldown', [[60, 9], [60, 9], [60, 8]]),
+  ];
+  assert.equal(suggest('lat-pulldown', target, improving, 'lb').kind, 'same');
+});
+
+test('dumbbells move to the next real size; machines one pin', () => {
+  const target = { sets: 3, reps: [10, 12] };
+  const db = [gymSession('a', '2026-10-01', 'lateral-raise', [[10, 12], [10, 12], [10, 12]])];
+  assert.equal(suggest('lateral-raise', target, db, 'lb').weight, 12);
+  const dbKg = [gymSession('a', '2026-10-01', 'db-bench', [[12.5, 12], [12.5, 12], [12.5, 12]])];
+  dbKg[0].unit = 'kg';
+  assert.equal(suggest('db-bench', target, dbKg, 'kg').weight, 15);
+  const assisted0 = [gymSession('a', '2026-10-01', 'assisted-pullup', [[0, 8], [0, 7], [0, 7]])];
+  assert.match(suggest('assisted-pullup', { sets: 3, reps: [6, 10] }, assisted0, 'lb').text, /Full bodyweight/);
 });
 
 test('assisted exercises progress by reducing assistance', () => {
@@ -113,12 +165,12 @@ test('suggestions convert units when the user switches lb/kg', () => {
 });
 
 test('building a gym session pre-fills suggested weights and applies swaps', () => {
-  const sessions = [gymSession('a', '2026-10-01', 'machine-chest-press', [[80, 12], [80, 12], [80, 12]])];
+  const sessions = [gymSession('a', '2026-10-01', 'machine-chest-press', [[80, 15], [80, 15], [80, 15]])];
   const state = { profile: { units: 'lb', startDate: '2026-10-01' }, sessions, swaps: { 'leg-press': 'goblet-squat' } };
   const s = buildGymSession(GYM_TEMPLATES[0], state);
   assert.equal(s.exercises[0].ex, 'goblet-squat');
   const chest = s.exercises.find((e) => e.ex === 'machine-chest-press');
-  assert.equal(chest.sets[0].w, 90);
+  assert.equal(chest.sets[0].w, 85);
   assert.equal(chest.sets.length, 3);
 });
 
@@ -189,5 +241,46 @@ test('service worker precaches every app file', async () => {
     .flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : [`${dir}/${d.name}`]));
   for (const file of [...walk('js'), 'css/app.css', 'index.html', 'manifest.webmanifest']) {
     assert.ok(sw.includes(`'${file}'`), `sw.js is missing ${file}`);
+  }
+});
+
+test('simple swim mode keeps distance but removes drills', async () => {
+  const { getSwimWorkout, workoutDistance, guideForItem, getDrill } = await import('../js/data/swim.js');
+  for (const level of ['novice', 'comfortable']) {
+    for (const p of [1, 2, 3]) {
+      for (const k of ['tech', 'endure']) {
+        const key = `${level}-p${p}-${k}`;
+        const full = getSwimWorkout(key);
+        const simple = getSwimWorkout(key, 'simple');
+        assert.equal(workoutDistance(simple.blocks), workoutDistance(full.blocks), key);
+        for (const b of simple.blocks) {
+          for (const it of b.items) {
+            assert.ok(['Free', 'Breast', 'Kick'].includes(it.stroke), `${key}: ${it.stroke}`);
+            assert.ok(!it.drill || it.drill === 'kickboard', `${key}: drill ${it.drill}`);
+          }
+        }
+      }
+    }
+  }
+  // learner skills stay intact
+  assert.ok(getSwimWorkout('learner-p1-tech', 'simple').blocks.some((b) => b.items.some((it) => it.stroke === 'Skill')));
+  assert.equal(guideForItem({ stroke: 'Breast' }), 'stroke-breast');
+  assert.equal(guideForItem({ stroke: 'Drill', drill: 'catch-up' }), 'catch-up');
+  assert.ok(getDrill('stroke-free'));
+});
+
+test('demo media points at real exercises and files', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  const { FRAMES, VIDEOS } = await import('../js/data/media.js');
+  const { getDrill } = await import('../js/data/swim.js');
+  for (const id of Object.keys(FRAMES)) {
+    assert.ok(getExercise(id), `frames for unknown exercise ${id}`);
+    for (const i of [0, 1]) assert.ok(fs.existsSync(path.join(root, `media/ex/${id}-${i}.jpg`)), `missing photo ${id}-${i}`);
+  }
+  for (const [id, v] of Object.entries(VIDEOS)) {
+    assert.ok(getExercise(id) || getDrill(id), `video for unknown id ${id}`);
+    assert.match(v.id, /^[A-Za-z0-9_-]{11}$/, `bad video id for ${id}`);
   }
 });

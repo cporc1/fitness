@@ -175,7 +175,7 @@ registerRoute('progress', (_p, state) => h('div', { class: 'view' },
   consistency(state),
   strength(state),
   swimming(state),
-  body(state),
+  state.settings?.trackBody ? body(state) : null,
   h('section', { class: 'section' }, sectionHead('Milestones'), milestones(state))));
 
 registerRoute('body-log', (_p, state) => {

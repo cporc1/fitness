@@ -3,7 +3,7 @@
 import * as store from '../store.js';
 import { h, icon, ICONS, fmtClock, fmtNum, fmtDate, put, fill } from '../util.js';
 import { ctx, back, tab, registerRoute } from '../app.js';
-import { STROKES, getDrill, SWIM_WARMUP_DRY } from '../data/swim.js';
+import { STROKES, getDrill, guideForItem, SWIM_WARMUP_DRY } from '../data/swim.js';
 import { computeSwimDistance, plannedSwimDistance } from '../program.js';
 import { finishSession, discardActive, saveActive } from '../actions.js';
 import { openDrillSheet } from './library.js';
@@ -20,6 +20,13 @@ export function describeItem(it, unit) {
   else what = it.label || drill?.name || stroke;
   if (it.dist && it.label) what = `${it.dist} ${unit} ${it.label}`;
   return what;
+}
+
+/** "How to: Freestyle" link for a set: its drill, or the stroke it uses. */
+export function howToLink(it, onOpen = openDrillSheet, arrow = '') {
+  const id = guideForItem(it);
+  const g = id ? getDrill(id) : null;
+  return g ? h('button', { class: 'drill-link', type: 'button', onclick: (e) => { e.stopPropagation(); onOpen(g.id); } }, `How to: ${g.name}${arrow}`) : null;
 }
 
 function lengthsLabel(it, poolLen) {
@@ -98,14 +105,13 @@ function swimEditor(session, mode) {
         live ? h('button', { class: 'big-tap good', onclick: () => finishSession(session) }, icon(ICONS.check, 30), 'Finish') : null);
     }
     const { item, block, ri } = cur;
-    const drill = item.drill ? getDrill(item.drill) : null;
     return h('section', { class: 'focus-card', 'aria-live': 'polite' },
       h('div', { class: 'row between' },
         h('div', { class: 'eyebrow' }, `${block.name} · rep ${ri + 1} of ${item.reps}`),
         lengthsLabel(item, poolLen) ? h('span', { class: 'chip swim' }, lengthsLabel(item, poolLen)) : null),
       h('div', { class: 'fc-what' }, describeItem(item, unit)),
       item.note ? h('p', { class: 'fc-sub' }, item.note) : null,
-      drill ? h('button', { class: 'drill-link', onclick: () => openDrillSheet(drill.id) }, `How to: ${drill.name} →`) : null,
+      howToLink(item, openDrillSheet, ' →'),
       h('div', { class: 'small ink-2' }, item.rest ? `Rest ${item.rest} s after each rep` : 'No set rest: move straight on'),
       h('button', { class: 'big-tap', onclick: () => completeRep(cur) }, icon(ICONS.check, 30), 'Rep done'));
   }
@@ -139,7 +145,6 @@ function swimEditor(session, mode) {
         const doneCount = it.done.filter(Boolean).length;
         const cur = currentRep();
         const isCurrent = cur && cur.item === it;
-        const drill = it.drill ? getDrill(it.drill) : null;
         return h('div', { class: `swim-item${isCurrent ? ' current' : ''}${doneCount === it.reps ? ' complete' : ''}` },
           h('div', { class: 'si-main' },
             h('span', { class: 'si-reps' }, `${it.reps} ×`),
@@ -150,7 +155,7 @@ function swimEditor(session, mode) {
             it.dist ? `${it.dist * it.reps} ${unit} total` : null,
           ].filter(Boolean).join(' · ')),
           it.note ? h('div', { class: 'small ink-2' }, it.note) : null,
-          drill ? h('button', { class: 'drill-link', onclick: () => openDrillSheet(drill.id) }, `How to: ${drill.name}`) : null,
+          howToLink(it),
           h('div', { class: 'rep-dots', role: 'group', 'aria-label': 'Reps' }, it.done.map((d, ri) => h('button', {
             class: `rep-dot${d ? ' done' : ''}`, type: 'button', 'aria-pressed': String(d), 'aria-label': `Rep ${ri + 1}`,
             onclick: () => { it.done[ri] = !it.done[ri]; persist(); draw(); },

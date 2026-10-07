@@ -1,6 +1,6 @@
 // Demo media: an animated start/finish photo pair and a tap-to-play video.
 
-import { h, icon, ICONS, youtubeSearch } from './util.js';
+import { h, icon, ICONS } from './util.js';
 import { framesFor, videoFor, PHOTO_CREDIT } from './data/media.js';
 
 /** Two photos (start and finish) that cross-fade in a loop. Tap to pause. */
@@ -23,16 +23,12 @@ export function demoFrames(id, name) {
 }
 
 /**
- * A video thumbnail that becomes an embedded YouTube player when tapped.
- * Falls back to a YouTube search link when there's no curated video.
+ * A video thumbnail that turns into an embedded player right here when
+ * tapped, so you never leave the app. Nothing is shown without a video.
  */
-export function demoVideo(id, searchQuery) {
+export function demoVideo(id) {
   const v = videoFor(id);
-  if (!v) {
-    return h('a', { class: 'btn ghost', href: youtubeSearch(searchQuery), target: '_blank', rel: 'noopener' },
-      icon(ICONS.external, 18), 'Find demo videos on YouTube');
-  }
-  const watchUrl = v.short ? `https://www.youtube.com/shorts/${v.id}` : `https://www.youtube.com/watch?v=${v.id}`;
+  if (!v) return null;
   const frame = h('div', { class: `video${v.short ? ' short' : ''}` });
   const load = () => {
     frame.replaceChildren(h('iframe', {
@@ -46,12 +42,11 @@ export function demoVideo(id, searchQuery) {
     h('span', { class: 'video-play' }, icon(ICONS.play, 30))));
   return h('div', { class: 'stack', style: { gap: '6px' } },
     frame,
-    h('div', { class: 'row between small', style: { alignItems: 'flex-start' } },
-      h('span', { class: 'muted grow' }, `${v.title} · ${v.channel}`),
-      h('a', { href: watchUrl, target: '_blank', rel: 'noopener', class: 'small', style: { whiteSpace: 'nowrap', fontWeight: 600 } }, 'Open in YouTube')));
+    h('span', { class: 'xs muted' }, `Video: ${v.title} · ${v.channel}. Plays here in the app.`));
 }
 
 /** Media block for an exercise or swim guide: photos (if any) then video. */
-export function demoMedia(id, name, searchQuery) {
-  return h('div', { class: 'stack' }, demoFrames(id, name), demoVideo(id, searchQuery));
+export function demoMedia(id, name) {
+  const parts = [demoFrames(id, name), demoVideo(id)].filter(Boolean);
+  return parts.length ? h('div', { class: 'stack' }, ...parts) : null;
 }

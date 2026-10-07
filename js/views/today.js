@@ -23,10 +23,16 @@ function weekStrip(state, today) {
     const slot = slotForDate(state.schedule, iso);
     const done = state.sessions.some((s) => s.date === iso);
     const kind = slot.startsWith('custom:') ? (state.custom?.templates?.find((t) => `custom:${t.id}` === slot)?.kind || 'gym') : slot;
-    const mark = done ? icon(ICONS.check, 16) : kind === 'gym' ? icon(ICONS.dumbbell, 16) : kind === 'swim' ? icon(ICONS.wave, 16) : h('span', null, '·');
+    let mark;
+    if (done) mark = icon(ICONS.check, 16);
+    else if (kind === 'both') mark = h('span', { class: 'both-icons' }, icon(ICONS.dumbbell, 12), icon(ICONS.wave, 12));
+    else if (kind === 'gym') mark = icon(ICONS.dumbbell, 16);
+    else if (kind === 'swim') mark = icon(ICONS.wave, 16);
+    else mark = h('span', null, '·');
+    const label = { gym: 'gym', swim: 'swim', both: 'gym and swim', rest: 'rest' }[kind] || kind;
     cells.push(h('button', {
       class: `wday${iso === today ? ' is-today' : ''}`, type: 'button',
-      'aria-label': `${WEEKDAYS_LONG[i]}: ${done ? 'done' : kind}`,
+      'aria-label': `${WEEKDAYS_LONG[i]}: ${done ? 'done' : label}`,
       onclick: () => go('day', { date: iso }),
     },
     h('span', { class: 'wd-name' }, WEEKDAYS_SHORT[i].slice(0, 3)),
@@ -36,66 +42,38 @@ function weekStrip(state, today) {
   return h('div', { class: 'week-strip' }, cells);
 }
 
-/** The big card for a day's planned session. */
-export function planCard(state, dateIso) {
-  const plan = planForDay(state, dateIso);
-  const isToday = dateIso === todayISO();
-  const unit = state.profile?.units || 'lb';
+function stepChip(kind, step) {
+  const label = kind === 'swim' ? 'Swim' : 'Gym';
+  return h('span', { class: `chip ${kind}` }, icon(kind === 'swim' ? ICONS.wave : ICONS.dumbbell, 14), step ? `${step} · ${label}` : label);
+}
+
+function swimHero(state, t, isToday, step) {
   const poolLen = state.profile?.pool?.len || 25;
   const poolUnit = state.profile?.pool?.unit || 'yd';
+  const blocks = expandForPool(t.blocks || [], poolLen, state.profile?.swimLevel);
+  const dist = workoutDistance(blocks);
+  return h('section', { class: 'hero swim' },
+    lanes('swim'),
+    h('div', { class: 'row' }, stepChip('swim', step), h('span', { class: 'small muted' }, dist ? `${dist} ${poolUnit}` : 'Skills session')),
+    h('h2', null, t.name),
+    t.focus ? h('p', { class: 'ink-2' }, t.focus) : null,
+    h('ul', { class: 'hero-list' }, blocks.map((b) => {
+      const bd = b.items.reduce((sum, it) => sum + (it.dist || 0) * it.reps, 0);
+      const reps = b.items.filter((it) => it.dist).map((it) => `${it.reps}×${it.dist}`).join(', ');
+      const skills = b.items.length === 1 ? '1 skill' : `${b.items.length} skills`;
+      return h('li', null, h('span', { class: 't' }, b.name), h('span', { class: 'v' }, bd ? `${reps} · ${bd} ${poolUnit}` : skills));
+    })),
+    isToday ? h('button', { class: 'btn pool lg block', onclick: () => startSwim(t) }, icon(ICONS.play, 20), 'Start swim') : null);
+}
 
-  if (plan.doneToday.length && isToday) {
-    const s = plan.doneToday[0];
-    return h('section', { class: `hero ${s.kind === 'swim' ? 'swim' : s.kind === 'gym' ? 'gym' : ''}` },
-      lanes(s.kind === 'swim' ? 'swim' : 'gym'),
-      h('span', { class: 'chip good', style: { alignSelf: 'flex-start' } }, icon(ICONS.check, 14), 'Done today'),
-      h('h2', null, plan.doneToday.map((x) => x.name).join(' + ')),
-      h('p', { class: 'ink-2' }, 'Great work. Recover well: eat some protein, drink water, and get a good night\'s sleep.'),
-      h('div', { class: 'btn-row' },
-        h('button', { class: 'btn ghost', onclick: () => go('session-detail', { id: s.id }) }, 'View workout'),
-        h('button', { class: 'btn quiet', onclick: openStartPicker }, 'Train again')));
-  }
-
-  if (plan.slot === 'rest' || !plan.template) {
-    return h('section', { class: 'hero' },
-      h('span', { class: 'chip', style: { alignSelf: 'flex-start' } }, icon(ICONS.rest, 14), 'Rest day'),
-      h('h2', null, 'Recover and recharge'),
-      h('ul', { class: 'checklist' },
-        h('li', null, 'A 20–30 minute walk keeps you moving without tiring you out'),
-        h('li', null, 'Hit your protein and water targets'),
-        h('li', null, 'Sleep 7–9 hours. This is when you actually get stronger')),
-      isToday && !state.sessions.length ? h('div', { class: 'callout' }, 'Keen to get going? Your first session doesn\'t have to wait for a gym day.') : null,
-      isToday && !state.sessions.length ? h('button', { class: 'btn iron lg block', onclick: () => startGym(nextGymTemplate(state.sessions, plan.phase.id)) }, icon(ICONS.play, 20), 'Start your first workout') : null,
-      isToday ? h('div', { class: 'btn-row' },
-        h('button', { class: 'btn quiet', onclick: openStartPicker }, state.sessions.length ? 'Train anyway' : 'Pick another'),
-        h('button', { class: 'btn ghost', onclick: () => openLogOther() }, 'Log a walk')) : null);
-  }
-
-  const t = plan.template;
-  if (plan.slot === 'swim') {
-    const blocks = expandForPool(t.blocks || [], poolLen);
-    const dist = workoutDistance(blocks);
-    return h('section', { class: 'hero swim' },
-      lanes('swim'),
-      h('div', { class: 'row' }, h('span', { class: 'chip swim' }, icon(ICONS.wave, 14), 'Swim'), h('span', { class: 'small muted' }, dist ? `${dist} ${poolUnit}` : 'Skills session')),
-      h('h2', null, t.name),
-      t.focus ? h('p', { class: 'ink-2' }, t.focus) : null,
-      h('ul', { class: 'hero-list' }, blocks.map((b) => {
-        const bd = b.items.reduce((sum, it) => sum + (it.dist || 0) * it.reps, 0);
-        const reps = b.items.filter((it) => it.dist).map((it) => `${it.reps}×${it.dist}`).join(', ');
-        const skills = b.items.length === 1 ? '1 skill' : `${b.items.length} skills`;
-        return h('li', null, h('span', { class: 't' }, b.name), h('span', { class: 'v' }, bd ? `${reps} · ${bd} ${poolUnit}` : skills));
-      })),
-      isToday ? h('button', { class: 'btn pool lg block', onclick: () => startSwim(t) }, icon(ICONS.play, 20), 'Start swim') : null);
-  }
-
-  // gym
+function gymHero(state, t, isToday, step) {
+  const unit = state.profile?.units || 'lb';
   const exs = t.exercises || [];
-  const swaps = state.swaps || {};
+  const swaps = t.split ? (state.swaps || {}) : {};
   const ups = exs.filter((item) => suggest(swaps[item.ex] || item.ex, item, state.sessions, unit).kind === 'up').length;
   return h('section', { class: 'hero gym' },
     lanes('gym'),
-    h('div', { class: 'row' }, h('span', { class: 'chip gym' }, icon(ICONS.dumbbell, 14), 'Gym'), h('span', { class: 'small muted' }, `${exs.length} exercises · ~${Math.round(exs.reduce((m, e) => m + e.sets * (1 + (e.rest || 90) / 60), 0) + 8)} min`)),
+    h('div', { class: 'row' }, stepChip('gym', step), h('span', { class: 'small muted' }, `${exs.length} exercises · ~${Math.round(exs.reduce((m, e) => m + e.sets * (1 + (e.rest || 90) / 60), 0) + 8)} min`)),
     h('h2', null, t.name),
     t.focus ? h('p', { class: 'ink-2' }, t.focus) : null,
     h('ul', { class: 'hero-list' }, exs.map((item) => {
@@ -108,6 +86,63 @@ export function planCard(state, dateIso) {
     h('div', { class: 'xs muted' }, 'Tap an exercise to see how to do it.'),
     ups ? h('div', { class: 'small c-good', style: { fontWeight: 600 } }, `Ready to add weight on ${ups} ${ups === 1 ? 'exercise' : 'exercises'}`) : null,
     isToday ? h('button', { class: 'btn iron lg block', onclick: () => startGym(t) }, icon(ICONS.play, 20), 'Start workout') : null);
+}
+
+function doneRow(session) {
+  return h('button', { class: 'done-row', type: 'button', onclick: () => go('session-detail', { id: session.id }) },
+    h('span', { class: 'chip good' }, icon(ICONS.check, 14), 'Done'),
+    h('span', { class: 'grow' }, session.name),
+    icon(ICONS.chevron, 16));
+}
+
+/** The card(s) for a day's plan: one per session, or a rest/done card. */
+export function planCard(state, dateIso) {
+  const plan = planForDay(state, dateIso);
+  const isToday = dateIso === todayISO();
+  const pending = plan.parts.filter((p) => !(isToday && p.done));
+
+  if (isToday && plan.doneToday.length && !pending.length) {
+    const s = plan.doneToday[0];
+    return h('section', { class: `hero ${s.kind === 'swim' ? 'swim' : s.kind === 'gym' ? 'gym' : ''}` },
+      lanes(s.kind === 'swim' ? 'swim' : 'gym'),
+      h('span', { class: 'chip good', style: { alignSelf: 'flex-start' } }, icon(ICONS.check, 14), 'Done today'),
+      h('h2', null, plan.doneToday.map((x) => x.name).join(' + ')),
+      h('p', { class: 'ink-2' }, 'Great work. Recover well: eat some protein, drink water, and get a good night\'s sleep.'),
+      h('div', { class: 'btn-row' },
+        h('button', { class: 'btn ghost', onclick: () => go('session-detail', { id: s.id }) }, 'View workout'),
+        h('button', { class: 'btn quiet', onclick: openStartPicker }, 'Train again')));
+  }
+
+  if (!plan.parts.length) {
+    return h('section', { class: 'hero' },
+      h('span', { class: 'chip', style: { alignSelf: 'flex-start' } }, icon(ICONS.rest, 14), 'Rest day'),
+      h('h2', null, 'Recover and recharge'),
+      h('ul', { class: 'checklist' },
+        h('li', null, 'A 20–30 minute walk keeps you moving without tiring you out'),
+        h('li', null, 'Eat well and drink plenty of water'),
+        h('li', null, 'Sleep 7–9 hours. This is when you actually get stronger')),
+      isToday && !state.sessions.length ? h('div', { class: 'callout' }, 'Keen to get going? Your first session doesn\'t have to wait for a gym day.') : null,
+      isToday && !state.sessions.length ? h('button', { class: 'btn iron lg block', onclick: () => startGym(nextGymTemplate(state.sessions, plan.phase.id, state.profile?.split)) }, icon(ICONS.play, 20), 'Start your first workout') : null,
+      isToday ? h('div', { class: 'btn-row' },
+        h('button', { class: 'btn quiet', onclick: openStartPicker }, state.sessions.length ? 'Train anyway' : 'Pick another'),
+        h('button', { class: 'btn ghost', onclick: () => openLogOther() }, 'Log a walk')) : null);
+  }
+
+  const combo = plan.parts.length > 1;
+  const cards = [];
+  if (combo) {
+    cards.push(h('div', { class: 'callout' }, h('strong', null, 'Gym + swim day. '),
+      'Lift first, then swim. If your legs or shoulders are tired, keep the swim easy. Splitting them (morning and evening) works too.'));
+  }
+  plan.parts.forEach((p, i) => {
+    const step = combo ? i + 1 : null;
+    if (isToday && p.done) {
+      const s = plan.doneToday.find((x) => x.kind === p.kind);
+      if (s) { cards.push(doneRow(s)); return; }
+    }
+    cards.push(p.kind === 'swim' ? swimHero(state, p.template, isToday, step) : gymHero(state, p.template, isToday, step));
+  });
+  return cards.length === 1 ? cards[0] : h('div', { class: 'stack lg' }, cards);
 }
 
 function statTiles(state, today) {
@@ -208,7 +243,7 @@ registerRoute('today', (_params, state) => {
     planCard(state, today),
     h('button', { class: 'btn ghost', onclick: openStartPicker }, 'Do a different workout'),
     statTiles(state, today),
-    checkIn(state, today),
+    state.settings?.trackBody ? checkIn(state, today) : null,
     h('div', { class: 'tip' }, icon(ICONS.info, 20), h('div', { class: 'stack', style: { gap: '2px' } }, h('span', { class: 'eyebrow' }, 'Tip of the day'), h('p', null, tip))));
 
   // Data lives on the phone, so nudge for a backup every few weeks.

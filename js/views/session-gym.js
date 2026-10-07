@@ -7,7 +7,7 @@ import { getExercise } from '../data/exercises.js';
 import { WARMUP_GYM } from '../data/plans.js';
 import { exerciseEntry } from '../program.js';
 import { finishSession, discardActive, saveActive } from '../actions.js';
-import { exercisePicker, openExerciseSheet, fmtSet } from './library.js';
+import { exercisePicker, openExerciseSheet, fmtSet, exThumb } from './library.js';
 import { sheet, toast } from '../ui.js';
 import { startRest, stopRest, restBar, paceClock, onRestChange, restState } from '../timer.js';
 
@@ -194,6 +194,7 @@ function sessionEditor(session, mode) {
     const chip = sugg ? SUGG_CHIP[sugg.kind] : null;
     return h('article', { class: `ex-card${allDone ? ' complete' : ''}` },
       h('div', { class: 'ex-head' },
+        exThumb(entry.ex) ? h('button', { style: { all: 'unset', cursor: 'pointer' }, 'aria-label': `Photo and how-to for ${def?.name}`, onclick: () => openExerciseSheet(entry.ex) }, exThumb(entry.ex)) : null,
         h('div', { class: 'grow stack', style: { gap: '2px' } },
           h('button', { style: { all: 'unset', cursor: 'pointer' }, onclick: () => openExerciseSheet(entry.ex) },
             h('div', { class: 'ex-name' }, def?.name || entry.ex)),

@@ -13,7 +13,9 @@ export const GUIDES = [
         'Weeks 9–12 · Progress: heavier main lifts and longer swims.',
       ] },
       { h: 'Your week' },
-      { p: 'In Plan you choose which days are gym, swim or rest. The app then picks the right session: gym days alternate Full Body A and Full Body B, swim days alternate Technique and Endurance. Missed a day? No problem. The next session simply waits for you.' },
+      { p: 'In Plan you choose which days are gym, swim, gym + swim, or rest. The app then picks the right session: gym days alternate between two workouts, swim days alternate Technique and Endurance. On a gym + swim day, lift first and then swim. Missed a day? No problem. The next session simply waits for you.' },
+      { h: 'Full body or upper / lower?' },
+      { p: 'What builds muscle is training each muscle about twice a week with enough hard sets. With 2–3 gym sessions a week, full-body workouts get you there: every session hits everything. Upper / lower splits only reach twice a week when you lift 4 or more times. Swimming also works your back and shoulders, so full body plus the pool is a balanced week for a beginner. Lifting 4+ days? Switch to upper / lower in Plan → Program settings.' },
       { h: 'The one rule' },
       { p: 'Show up consistently and log what you do. Consistency beats intensity for the first months. Two average workouts every week for 12 weeks will change you far more than one perfect week.' },
       { tip: 'Check with your doctor before starting if you have heart, blood pressure, joint or other health concerns.' },
@@ -45,14 +47,14 @@ export const GUIDES = [
     body: [
       { p: 'Each exercise has a rep range, like 3 sets of 8–12. Here is the system:' },
       { ol: [
-        'Pick a weight you can lift for the bottom of the range (8) with good form.',
+        'Pick a weight you can lift for the bottom of the range (8) with good form and 3–4 reps still in the tank.',
         'Each session, try to add a rep or two to some sets.',
         'When you hit the top of the range (12) on every set, increase the weight next time.',
         'With the heavier weight, you will be back near the bottom of the range. Repeat.',
       ] },
       { p: 'The app does the bookkeeping. When you finished every set at the top of the range last time, it suggests the next weight up and shows a green "Add weight" tag.' },
       { h: 'How much to add' },
-      { ul: ['Upper-body barbell lifts: 5 lb / 2.5 kg', 'Lower-body barbell lifts: 10 lb / 5 kg', 'Dumbbells: the next pair up', 'Machines: the next pin, or 5–10 lb'] },
+      { ul: ['Barbell lifts: 5 lb / 2.5 kg (lower-body lifts can go up 10 lb / 5 kg once you are well past 135 lb / 60 kg)', 'Dumbbells: the next pair up', 'Machines: the next pin, or the small add-on weight'] },
       { tip: 'Form first. Only count reps that look like the first rep. Grinding, bouncing or swinging does not count.' },
     ],
   },
@@ -131,7 +133,7 @@ export const GUIDES = [
       { ul: [
         'Pick a lane that matches your speed. Lanes are often marked slow / medium / fast.',
         'Two people can split a lane: each takes one side.',
-        'Three or more: circle swim. Stay to the right (counter-clockwise in most countries) like driving.',
+        'Three or more: circle swim. Follow the posted direction: usually counter-clockwise (keep right) in the US and Europe, clockwise in the UK and Australia.',
         'To pass, tap the feet of the swimmer ahead once. If someone taps yours, pause at the next wall and let them go.',
         'Rest in the corners of the wall, not in the middle where others turn.',
         'Shower before you swim. Bring goggles, a cap if required, and a towel.',
@@ -158,7 +160,7 @@ export const GUIDES = [
     summary: 'Protein, calories and hydration without overthinking it.',
     body: [
       { h: 'Protein' },
-      { p: 'The single most useful habit. Aim for about 0.7–1 g per pound of body weight (1.6–2.2 g/kg) per day, spread over 3–4 meals. Easy sources: eggs, Greek yogurt, chicken, fish, lean beef, tofu, beans, cottage cheese, protein shakes.' },
+      { p: 'The single most useful habit. Aim for about 0.7–1 g per pound of body weight (1.6–2.2 g/kg) per day, spread over 3–4 meals. With a lot of weight to lose, base it on your goal weight instead. Easy sources: eggs, Greek yogurt, chicken, fish, lean beef, tofu, beans, cottage cheese, protein shakes. Have kidney disease? Ask your doctor first.' },
       { h: 'Calories' },
       { ul: [
         'To lose fat: eat about 300–500 kcal under your maintenance. Aim for roughly 0.5–1% of body weight per week.',
@@ -203,7 +205,7 @@ export const GUIDES = [
 ];
 
 export const TIPS = [
-  'Exhale on the hard part of every lift: pushing, pulling or standing up.',
+  'Light lifts: exhale as you push or pull. Squats and deadlifts: breathe in and brace before each rep, exhale at the top.',
   'Look at the bottom of the pool when you swim. Your hips will float higher.',
   'Log every set, even bad days. The trend is what matters.',
   'Sore from yesterday? An easy swim is the perfect recovery.',

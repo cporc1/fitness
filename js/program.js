@@ -24,7 +24,7 @@ export function currentPhase(profile, dateIso = todayISO()) {
 /** Default weekly layouts by number of training days. Mon..Sun */
 export function defaultSchedule(daysPerWeek) {
   const layouts = {
-    2: ['gym', 'rest', 'rest', 'swim', 'rest', 'rest', 'rest'],
+    2: ['both', 'rest', 'rest', 'both', 'rest', 'rest', 'rest'],
     3: ['gym', 'rest', 'swim', 'rest', 'gym', 'rest', 'rest'],
     4: ['gym', 'swim', 'rest', 'gym', 'rest', 'swim', 'rest'],
     5: ['gym', 'swim', 'gym', 'rest', 'swim', 'gym', 'rest'],
@@ -37,15 +37,26 @@ export function slotForDate(schedule, dateIso) {
   return schedule?.days?.[weekdayIndex(dateIso)] || 'rest';
 }
 
-function isProgramGym(s) { return s.kind === 'gym' && typeof s.templateId === 'string' && /^p\d-[ab]$/.test(s.templateId); }
+/** Program session kinds a schedule slot contains ('both' = gym, then swim). */
+export function slotKinds(slot) {
+  if (slot === 'both') return ['gym', 'swim'];
+  if (slot === 'gym' || slot === 'swim') return [slot];
+  return [];
+}
+
+function isProgramGym(s) { return s.kind === 'gym' && typeof s.templateId === 'string' && /^p\d-[abul]$/.test(s.templateId); }
 function isProgramSwim(s) { return s.kind === 'swim' && typeof s.templateId === 'string' && s.templateId.startsWith('swim:'); }
 
-/** Next gym template: alternates A/B based on the last program gym session. */
-export function nextGymTemplate(sessions, phaseId) {
-  const templates = gymTemplatesForPhase(phaseId);
-  const last = sessions.find(isProgramGym);
+/**
+ * Next gym template: alternates A/B (full body) or Upper/Lower based on the
+ * last program gym session done in the same style.
+ */
+export function nextGymTemplate(sessions, phaseId, split = 'full') {
+  const templates = gymTemplatesForPhase(phaseId, split);
+  const style = templates[0]?.split;
+  const last = sessions.find((s) => isProgramGym(s) && getGymTemplate(s.templateId)?.split === style);
   if (!last) return templates[0];
-  const lastSlot = last.templateId.endsWith('-a') ? 'A' : 'B';
+  const lastSlot = getGymTemplate(last.templateId)?.slot;
   return templates.find((t) => t.slot !== lastSlot) || templates[0];
 }
 
@@ -61,43 +72,51 @@ export function nextSwimWorkout(sessions, level, phaseId, mode = 'full') {
  * How many sessions of `slot` sit between today and `dateIso` (exclusive),
  * so future days preview the right A/B or technique/endurance rotation.
  */
-function slotsAhead(state, slot, dateIso) {
+function slotsAhead(state, kind, dateIso) {
   const today = todayISO();
   if (dateIso <= today) return 0;
   let n = 0;
   for (let d = today; d < dateIso; d = addDays(d, 1)) {
-    if (slotForDate(state.schedule, d) !== slot) continue;
-    if (d === today && state.sessions.some((s) => s.date === today && s.kind === slot)) continue;
+    if (!slotKinds(slotForDate(state.schedule, d)).includes(kind)) continue;
+    if (d === today && state.sessions.some((s) => s.date === today && s.kind === kind)) continue;
     n += 1;
   }
   return n;
 }
 
-/** What's on for a given day. */
+/**
+ * What's on for a given day:
+ * { slot, phase, parts: [{ kind: 'gym'|'swim', template, done }], doneToday, template }
+ * `template` is the first part's, for callers that only need one.
+ */
 export function planForDay(state, dateIso = todayISO()) {
   const { profile, schedule, sessions, custom } = state;
   const phase = currentPhase(profile, dateIso);
   const slot = slotForDate(schedule, dateIso);
   const doneToday = sessions.filter((s) => s.date === dateIso);
-  if (slot === 'gym') {
-    let t = nextGymTemplate(sessions, phase.id);
-    if (slotsAhead(state, slot, dateIso) % 2 === 1) t = gymTemplatesForPhase(phase.id).find((x) => x.id !== t.id) || t;
-    return { slot, phase, template: t, doneToday };
-  }
-  if (slot === 'swim') {
-    const mode = state.settings?.swimMode || 'full';
-    let w = nextSwimWorkout(sessions, profile?.swimLevel, phase.id, mode);
-    if (slotsAhead(state, slot, dateIso) % 2 === 1) {
-      const [tech, endure] = swimTemplateKeys(profile?.swimLevel || 'novice', phase.id);
-      w = getSwimWorkout(w.key === tech ? endure : tech, mode);
+  const split = profile?.split || 'full';
+  const mode = state.settings?.swimMode || 'full';
+  const parts = [];
+  for (const kind of slotKinds(slot)) {
+    let template;
+    if (kind === 'gym') {
+      template = nextGymTemplate(sessions, phase.id, split);
+      if (slotsAhead(state, 'gym', dateIso) % 2 === 1) template = gymTemplatesForPhase(phase.id, split).find((x) => x.id !== template.id) || template;
+    } else {
+      template = nextSwimWorkout(sessions, profile?.swimLevel, phase.id, mode);
+      if (slotsAhead(state, 'swim', dateIso) % 2 === 1) {
+        const [tech, endure] = swimTemplateKeys(profile?.swimLevel || 'novice', phase.id);
+        template = getSwimWorkout(template.key === tech ? endure : tech, mode);
+      }
     }
-    return { slot, phase, template: w, doneToday };
+    parts.push({ kind, template, done: doneToday.some((s) => s.kind === kind) });
   }
   if (slot && slot.startsWith('custom:')) {
     const t = custom?.templates?.find((c) => c.id === slot.slice(7));
-    if (t) return { slot: t.kind, phase, template: t, doneToday, custom: true };
+    if (t) parts.push({ kind: t.kind, template: t, done: doneToday.some((s) => s.templateId === t.id), custom: true });
   }
-  return { slot: 'rest', phase, template: null, doneToday };
+  const effective = parts.length ? (slot === 'both' ? 'both' : parts[0].kind) : 'rest';
+  return { slot: effective, phase, parts, doneToday, template: parts[0]?.template || null };
 }
 
 // ---------------- progression ----------------
@@ -118,6 +137,19 @@ function incrementFor(def, unit) {
   return unit === 'kg' ? 2.5 : 5;
 }
 
+// Dumbbells come in fixed sizes, so suggest the next pair that exists.
+const DB_LADDER = {
+  lb: [3, 5, 8, 10, 12, 15, 17.5, 20, 22.5, 25, ...Array.from({ length: 25 }, (_, i) => 30 + i * 5)],
+  kg: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12.5, 15, 17.5, 20, 22.5, 25, 27.5, 30, ...Array.from({ length: 20 }, (_, i) => 32.5 + i * 2.5)],
+};
+export function nextDumbbell(w, unit, dir = 1) {
+  const ladder = DB_LADDER[unit] || DB_LADDER.lb;
+  if (dir > 0) return ladder.find((x) => x > w + 0.01) ?? w + (unit === 'kg' ? 2.5 : 5);
+  return [...ladder].reverse().find((x) => x < w - 0.01) ?? ladder[0];
+}
+
+function totalReps(sets, measure) { return sets.reduce((sum, st) => sum + measure(st), 0); }
+
 /**
  * Suggest today's target for an exercise.
  * Returns { kind: 'new'|'up'|'same'|'down'|'reps', weight, reps, text, last }
@@ -129,7 +161,7 @@ export function suggest(exId, target, sessions, unit, beforeSessionId) {
   const perf = lastPerformance(exId, sessions, beforeSessionId);
   if (!perf) {
     const text = {
-      weight: 'Start light: pick a weight you could lift about 15 times, then do the target reps. Adjust next set if needed.',
+      weight: 'Start light: pick a weight you could lift about 15 times, then do the target reps. Adjust the next set if needed.',
       assisted: 'Start with plenty of assistance so every rep is smooth.',
       bodyweight: 'Do what you can with good form. Use an easier version if needed.',
       time: `Hold as long as you can with good form, up to ${repMax} s.`,
@@ -150,7 +182,7 @@ export function suggest(exId, target, sessions, unit, beforeSessionId) {
   if (type === 'time') {
     const best = Math.max(...sets.map((st) => st.sec || 0));
     if (sets.length >= (target?.sets || 1) && sets.every((st) => (st.sec || 0) >= repMax)) {
-      return { kind: 'reps', weight: null, reps: repMax, text: `You held ${repMax} s on every set. Try a harder version, or add 10 s.`, last };
+      return { kind: 'reps', weight: null, reps: repMax, text: `You held ${repMax} s on every set. Move to a harder version (feet closer together, or lift one foot).`, last };
     }
     return { kind: 'same', weight: null, reps: Math.min(repMax, best + 5), text: `Last best ${best} s. Aim for ${Math.min(repMax, best + 5)} s.`, last };
   }
@@ -167,36 +199,65 @@ export function suggest(exId, target, sessions, unit, beforeSessionId) {
   const atTop = sets.filter((st) => (st.w || 0) === topW);
   const measure = (st) => (type === 'weight_time' ? (st.sec || 0) : (st.r || 0));
   const inc = incrementFor(def, unit);
-  const step = unit === 'kg' ? 1 : 2.5; // rounding for back-off weights
+  const isDumbbell = def?.equipment === 'Dumbbell';
+  const isStack = def?.equipment === 'Machine' || def?.equipment === 'Cable';
   const hitTop = atTop.length >= (target?.sets || 1) && atTop.every((st) => measure(st) >= repMax);
+  const unitWord = type === 'weight_time' ? 's' : 'reps';
 
-  if (!topW) {
+  if (!topW && type !== 'assisted') {
     return { kind: 'same', weight: null, reps: repMin, text: 'Add a weight this time so the app can track your progress.', last };
   }
+  if (type === 'assisted' && !topW) {
+    const best = Math.max(...sets.map(measure));
+    const aim = Math.min(repMax, best + 1);
+    return { kind: 'reps', weight: 0, reps: aim, text: `Full bodyweight pull-ups! Aim for ${aim} reps.`, last };
+  }
   if (hitTop) {
-    const next = type === 'assisted' ? Math.max(0, topW - inc) : topW + inc;
-    const text = type === 'assisted'
-      ? `You hit ${repMax} on every set. Lower the assistance to ${fmtW(next)} ${unit}.`
+    if (type === 'assisted') {
+      const next = Math.max(0, topW - inc);
+      return { kind: 'up', weight: next, reps: repMin, text: `You hit ${repMax} on every set. Lower the assistance to ${fmtW(next)} ${unit} (less help = harder).`, last };
+    }
+    if (isDumbbell) {
+      const next = nextDumbbell(topW, unit, 1);
+      return { kind: 'up', weight: next, reps: repMin, text: `You hit ${repMax} on every set. Use the next dumbbells up (${fmtW(next)} ${unit}). Fewer reps than last time is normal; aim for ${repMin}+.`, last };
+    }
+    const next = Math.round((topW + inc) * 2) / 2;
+    const text = isStack
+      ? `You hit ${repMax} on every set. Go up one pin (about ${fmtW(next)} ${unit}), or add the small add-on weight. Aim for ${repMin}+ reps.`
       : `You hit ${repMax} on every set. Go up to ${fmtW(next)} ${unit} and aim for ${repMin}+ reps.`;
-    return { kind: 'up', weight: Math.round(next * 2) / 2, reps: repMin, text, last };
+    return { kind: 'up', weight: next, reps: repMin, text, last };
   }
 
-  // Two sessions in a row below the range at the same weight → back off.
-  const below = atTop.some((st) => measure(st) < repMin);
-  if (below) {
+  // Back off only after two sessions at this weight that started below the
+  // range AND made no progress in total reps.
+  const firstBelow = measure(atTop[0]) < repMin;
+  if (firstBelow) {
     const prev = lastPerformance(exId, sessions.filter((s) => s.id !== perf.session.id), beforeSessionId);
     if (prev) {
       const prevSets = prev.sets.map((st) => ({ ...st, w: st.w != null ? convertWeight(st.w, prev.session.unit, unit) : st.w }));
       const prevTop = Math.max(...prevSets.map((st) => st.w || 0));
-      if (Math.abs(prevTop - topW) < 0.01 && prevSets.some((st) => measure(st) < repMin)) {
-        const lighter = type === 'assisted' ? topW + inc : Math.max(step, Math.min(topW - step, round(topW * 0.9, step)));
-        return { kind: 'down', weight: lighter, reps: repMin, text: `Two sessions below ${repMin} reps. Drop to ${fmtW(lighter)} ${unit}, rebuild, and beat it.`, last };
+      const prevAtTop = prevSets.filter((st) => (st.w || 0) === prevTop);
+      const sameWeight = Math.abs(prevTop - topW) < 0.01;
+      const noProgress = totalReps(atTop, measure) <= totalReps(prevAtTop, measure);
+      if (sameWeight && prevAtTop.length && measure(prevAtTop[0]) < repMin && noProgress) {
+        if (type === 'assisted') {
+          const more = topW + inc;
+          return { kind: 'down', weight: more, reps: repMin, text: `No progress for two sessions. Add assistance: use ${fmtW(more)} ${unit}, rebuild, and beat it.`, last };
+        }
+        let lighter;
+        if (isDumbbell) lighter = nextDumbbell(topW, unit, -1);
+        else if (isStack) lighter = Math.max(inc, topW - inc);
+        else {
+          const step = unit === 'kg' ? 2.5 : 5;
+          lighter = Math.max(step, Math.min(topW - step, round(topW * 0.9, step)));
+        }
+        const how = isStack ? ` (one pin lighter)` : isDumbbell ? ' (one dumbbell size lighter)' : '';
+        return { kind: 'down', weight: lighter, reps: repMin, text: `No progress for two sessions. Drop to ${fmtW(lighter)} ${unit}${how} and build back up.`, last };
       }
     }
   }
   const bestReps = Math.max(...atTop.map(measure));
   const aim = Math.min(repMax, Math.max(repMin, bestReps + 1));
-  const unitWord = type === 'weight_time' ? 's' : 'reps';
   return { kind: 'same', weight: topW, reps: aim, text: `Same weight. Beat last time: aim for ${aim} ${unitWord} per set.`, last };
 }
 
@@ -244,7 +305,7 @@ export function buildGymSession(template, state, opts = {}) {
 export function buildSwimSession(workout, state, opts = {}) {
   const { profile } = state;
   const pool = { len: profile?.pool?.len || 25, unit: profile?.pool?.unit || 'yd' };
-  const blocks = expandForPool(workout.blocks || [], pool.len).map((b) => ({
+  const blocks = expandForPool(workout.blocks || [], pool.len, profile?.swimLevel).map((b) => ({
     name: b.name,
     items: b.items.map((it) => ({ ...it, done: Array.from({ length: it.reps }, () => false) })),
   }));

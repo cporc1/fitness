@@ -145,10 +145,12 @@ export function exportAll() {
   return out;
 }
 
+export function isBackup(data) {
+  return !!data && data.app === 'lift-and-lap' && !!data.docs && typeof data.docs === 'object';
+}
+
 export function importAll(data) {
-  if (!data || data.app !== 'lift-and-lap' || typeof data.docs !== 'object') {
-    throw new Error('This file is not a Lift & Lap backup.');
-  }
+  if (!isBackup(data)) throw new Error('This file is not a Lift & Lap backup.');
   for (const name of [...docs.keys()]) {
     if (!(name in data.docs)) set(name, null, { silent: true });
   }

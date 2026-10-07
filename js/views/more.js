@@ -25,7 +25,7 @@ registerRoute('more', (_p, state) => {
       listItem({ title: 'Learn', sub: `${GUIDES.length} short beginner guides`, leading: icon(ICONS.book), onclick: () => go('learn') }),
       listItem({ title: 'Exercise library', sub: 'How-to for every exercise and swim drill', leading: icon(ICONS.dumbbell), onclick: () => go('library') }),
       listItem({ title: 'Tools', sub: 'Plates, 1-rep max, swim pace, calories & protein', leading: icon(ICONS.tool), onclick: () => go('tools') }),
-      listItem({ title: 'Habits', sub: 'Water, sleep and protein history', leading: icon(ICONS.drop), onclick: () => go('habits') }))),
+      state.settings?.trackBody ? listItem({ title: 'Habits', sub: 'Water, sleep and protein history', leading: icon(ICONS.drop), onclick: () => go('habits') }) : null)),
     h('div', { class: 'card flush' }, h('div', { class: 'list' },
       listItem({ title: 'Settings', sub: 'Units, pool, rest timer, theme', leading: icon(ICONS.gear), onclick: () => go('settings') }),
       listItem({ title: 'Backup & data', sub: `${syncLine} · backup, restore, start over`, leading: icon(ICONS.download), onclick: () => go('data') }),
@@ -152,7 +152,7 @@ function nutritionTool(state) {
   const height = input({ id: 'nu-h', inputmode: 'decimal', value: n.height ?? '', placeholder: unit === 'kg' ? 'cm' : 'in' });
   const age = input({ id: 'nu-a', inputmode: 'numeric', value: n.age ?? '', placeholder: 'years' });
   const sex = select([{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Prefer not to say' }], n.sex || 'other', { id: 'nu-s' });
-  const activity = select(ACTIVITY.map((a) => ({ value: a.id, label: a.label })), n.activity || 'moderate', { id: 'nu-act' });
+  const activity = select(ACTIVITY.map((a) => ({ value: a.id, label: a.label })), n.activity || 'light', { id: 'nu-act' });
   const goalMap = { lose: 'lose', muscle: 'muscle' };
   const goal = select([{ value: 'lose', label: 'Lose fat (−400 kcal)' }, { value: 'health', label: 'Maintain' }, { value: 'muscle', label: 'Build muscle (+250 kcal)' }], n.goal || goalMap[p.goal] || 'health', { id: 'nu-g' });
   const out = h('div');
@@ -164,14 +164,15 @@ function nutritionTool(state) {
     const heightCm = unit === 'kg' ? hgt : hgt * 2.54;
     const t = w && hgt && a ? nutritionTargets({ weightKg, heightCm, age: a, sex: sex.value, activity: activity.value, goal: goal.value }) : null;
     if (!t) { fill(out, h('p', { class: 'small muted' }, 'Fill in your details for a starting estimate.')); return; }
-    const pLow = unit === 'kg' ? t.proteinLow : Math.round(w * 0.7);
-    const pHigh = unit === 'kg' ? t.proteinHigh : Math.round(w * 1.0);
+    const pLow = t.proteinLow;
+    const pHigh = t.proteinHigh;
     fill(out, 
       h('div', { class: 'kv' },
         h('div', null, h('span', { class: 'k' }, 'Daily calories'), h('span', { class: 'v' }, fmtNum(t.target, 0))),
         h('div', null, h('span', { class: 'k' }, 'Protein (g/day)'), h('span', { class: 'v' }, `${pLow}–${pHigh}`)),
-        h('div', null, h('span', { class: 'k' }, 'Water (L/day)'), h('span', { class: 'v' }, `${fmtNum(t.waterLiters, 1)}+`))),
-      h('p', { class: 'xs muted' }, `Maintenance is about ${fmtNum(t.maintenance, 0)} kcal. This is an estimate: track your weight for 2–3 weeks and adjust by 100–200 kcal if it moves faster or slower than you want.`));
+        h('div', null, h('span', { class: 'k' }, 'Water (L/day)'), h('span', { class: 'v' }, `about ${fmtNum(t.waterLiters, 1)}`))),
+      t.floored ? h('p', { class: 'small c-danger' }, 'Slower loss is safer at your size, so this target stops at a safe minimum. Talk to a dietitian before eating less.') : null,
+      h('p', { class: 'xs muted' }, `Maintenance is about ${fmtNum(t.maintenance, 0)} kcal. This is an estimate: track your weight for 2–3 weeks and adjust by 100–200 kcal if it moves faster or slower than you want. Water: drink to thirst, plus about 0.5 L for each hour of training. Have kidney disease? Ask your doctor about protein first.`));
     store.update('profile', (x) => ({ ...x, nutrition: { weight: w, height: hgt, age: a, sex: sex.value, activity: activity.value, goal: goal.value } }), { silent: true });
   };
   for (const el of [weight, height, age]) el.addEventListener('change', calc);
@@ -257,6 +258,11 @@ registerRoute('settings', (_p, state) => {
       toggle('Sound when rest is over', 'sound'),
       toggle('Keep screen awake during workouts', 'wakeLock', 'Stops your phone locking mid-set')),
     h('div', { class: 'card' },
+      h('label', { class: 'check-row' },
+        h('input', { type: 'checkbox', id: 'st-trackBody', checked: !!st.trackBody, onchange: (e) => setSettings({ trackBody: e.target.checked }) }),
+        h('span', { class: 'grow' }, h('div', { style: { fontWeight: 600 } }, 'Body & daily habits'),
+          h('div', { class: 'small muted' }, 'Show body weight, measurements, water and sleep tracking. Off keeps the app focused on workouts and swims.')))),
+    h('div', { class: 'card' },
       h('div', { class: 'field' }, h('span', { class: 'label' }, 'Appearance'),
         segmented([{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], st.theme || 'auto', (v) => setSettings({ theme: v }), 'Theme'))));
 });
@@ -295,6 +301,7 @@ registerRoute('data', (_p, state) => {
       if (!file) return;
       try {
         const data = JSON.parse(await file.text());
+        if (!store.isBackup(data)) { toast('That file is not a Lift & Lap backup.'); return; }
         const ok = await confirmDialog({ title: 'Restore this backup?', message: 'Everything currently in the app will be replaced with the backup.', confirm: 'Restore', danger: true });
         if (!ok) return;
         store.importAll(data);

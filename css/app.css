@@ -598,3 +598,18 @@ textarea.input { min-height: 88px; resize: vertical; line-height: 1.4; }
 .ex-thumb { width: 52px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; background: var(--surface-2); }
 .tap-row { cursor: pointer; }
 .tap-row:active { background: var(--surface-2); }
+
+.find-card { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 16px; background: var(--iron-wash); }
+.find-card p { color: var(--ink); }
+.find-card .chip.plain { background: var(--surface); }
+.ex-head .ex-thumb { width: 56px; height: 44px; margin-top: 2px; }
+
+.wday .wd-mark.both { width: 34px; border-radius: 13px; background: linear-gradient(90deg, var(--iron-wash) 50%, var(--pool-wash) 50%); }
+.both-icons { display: inline-flex; gap: 1px; }
+.both-icons svg:first-child { color: var(--iron); }
+.both-icons svg:last-child { color: var(--pool); }
+.done-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border-radius: 16px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink); font-weight: 600; text-align: left;
+}
+.chip.both { background: linear-gradient(90deg, var(--iron-wash) 50%, var(--pool-wash) 50%); color: var(--ink); }

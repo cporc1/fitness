@@ -16,11 +16,14 @@ export const EXERCISES = [
   {
     id: 'leg-press', name: 'Leg Press', group: 'Legs', equipment: 'Machine', type: 'weight', compound: true,
     muscles: 'Quads, glutes, hamstrings', inc: { lb: 10, kg: 5 }, level: 1,
+    aka: ['45° leg press', 'Sled leg press', 'Seated leg press', 'Plate-loaded leg press'],
+    find: 'A reclined seat with a big flat footplate in front of you. The 45° kind slides on rails and you load weight plates on its sides; the seated kind has a weight stack with a pin. Usually in the leg area of the gym.',
     steps: [
       'Sit with your back and hips flat against the pad. Feet shoulder-width apart in the middle of the platform.',
-      'Release the safety handles. Lower the platform by bending your knees toward your chest.',
+      'Press the platform up slightly, then release the safety handles. Lower it by bending your knees toward your chest.',
       'Stop when your hips start to peel off the seat or your knees reach about 90°.',
       'Press through your whole foot to straighten your legs, stopping just short of locking your knees.',
+      'When you finish, straighten your legs and turn the safety handles back on before taking your feet off.',
     ],
     cues: ['Knees track over your toes', 'Lower back stays glued to the pad', 'Push through mid-foot and heels'],
     mistakes: ['Locking the knees hard at the top', 'Letting the hips roll up at the bottom', 'Bouncing out of the bottom'],
@@ -29,6 +32,8 @@ export const EXERCISES = [
   {
     id: 'goblet-squat', name: 'Goblet Squat', group: 'Legs', equipment: 'Dumbbell', type: 'weight', compound: true,
     muscles: 'Quads, glutes, core', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Dumbbell goblet squat', 'Kettlebell goblet squat'],
+    find: 'No machine: one dumbbell (or kettlebell) from the rack and an open spot on the floor.',
     steps: [
       'Hold one dumbbell vertically against your chest, both hands cupping the top end.',
       'Stand with feet slightly wider than shoulders, toes turned out a little.',
@@ -41,13 +46,17 @@ export const EXERCISES = [
   },
   {
     id: 'back-squat', name: 'Barbell Back Squat', group: 'Legs', equipment: 'Barbell', type: 'weight', compound: true,
-    muscles: 'Quads, glutes, adductors, core', inc: { lb: 10, kg: 5 }, level: 2,
+    muscles: 'Quads, glutes, adductors, core', inc: { lb: 5, kg: 2.5 }, level: 2,
+    aka: ['Barbell squat', 'High-bar squat'],
+    find: 'A squat rack or power rack: a tall steel frame with hooks (J-hooks) for the bar and long safety bars or straps on the sides. Not the Smith machine, where the bar is fixed on rails.',
     steps: [
       'Set the bar in a squat rack at about armpit height. Set the safety bars just below your bottom position.',
       'Step under the bar and rest it on your upper back (not your neck). Grip it just outside your shoulders.',
       'Stand up to lift it off the hooks, take two or three small steps back, feet about shoulder-width.',
       'Brace your core, then bend hips and knees together and sit down until your thighs are about parallel to the floor.',
-      'Drive up through your whole foot to stand tall. Re-rack by walking forward until the bar touches the uprights.',
+      'Drive up through your whole foot to stand tall.',
+      'Re-rack by walking forward until the bar touches the uprights, then bend your knees to set it into the hooks.',
+      'If a rep stalls, sit down under control onto the safety bars, then slide out from under the bar.',
     ],
     cues: ['Big breath and brace before each rep', 'Knees follow your toes', 'Bar stays over mid-foot'],
     mistakes: ['Skipping the safety bars', 'Heels lifting', 'Good-morning: hips rise faster than the chest'],
@@ -56,6 +65,8 @@ export const EXERCISES = [
   {
     id: 'split-squat', name: 'Dumbbell Split Squat', group: 'Legs', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Quads, glutes (one leg at a time)', inc: { lb: 5, kg: 2 }, level: 1, unilateral: true,
+    aka: ['Static lunge', 'Dumbbell split squat'],
+    find: 'A pair of dumbbells and a little floor space.',
     steps: [
       'Hold a dumbbell in each hand. Take a long step forward so you are in a staggered stance.',
       'Lower straight down until your back knee almost touches the floor.',
@@ -68,6 +79,8 @@ export const EXERCISES = [
   {
     id: 'walking-lunge', name: 'Dumbbell Walking Lunge', group: 'Legs', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Quads, glutes, balance', inc: { lb: 5, kg: 2 }, level: 1, unilateral: true,
+    aka: ['Dumbbell lunge', 'Walking lunges'],
+    find: 'A pair of dumbbells and a clear stretch of floor, like a turf lane.',
     steps: [
       'Hold a dumbbell in each hand at your sides.',
       'Step forward and lower until both knees are bent about 90°.',
@@ -80,6 +93,8 @@ export const EXERCISES = [
   {
     id: 'step-up', name: 'Dumbbell Step-Up', group: 'Legs', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Quads, glutes', inc: { lb: 5, kg: 2 }, level: 1, unilateral: true,
+    aka: ['Box step-up', 'Bench step-up'],
+    find: 'A sturdy plyo box or flat bench about knee height, plus dumbbells.',
     steps: [
       'Stand facing a sturdy box or bench about knee height, a dumbbell in each hand.',
       'Place one whole foot on the box and stand up on it, driving through that heel.',
@@ -92,6 +107,8 @@ export const EXERCISES = [
   {
     id: 'db-rdl', name: 'Dumbbell Romanian Deadlift', group: 'Legs', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Hamstrings, glutes, lower back', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Dumbbell RDL', 'Stiff-leg dumbbell deadlift'],
+    find: 'A pair of dumbbells and a little floor space.',
     steps: [
       'Stand tall with a dumbbell in each hand in front of your thighs, feet hip-width.',
       'Soften your knees slightly and push your hips back, sliding the dumbbells down your legs.',
@@ -104,7 +121,9 @@ export const EXERCISES = [
   },
   {
     id: 'bb-rdl', name: 'Barbell Romanian Deadlift', group: 'Legs', equipment: 'Barbell', type: 'weight', compound: true,
-    muscles: 'Hamstrings, glutes, lower back', inc: { lb: 10, kg: 5 }, level: 2,
+    muscles: 'Hamstrings, glutes, lower back', inc: { lb: 5, kg: 2.5 }, level: 2,
+    aka: ['RDL', 'Romanian deadlift'],
+    find: 'A barbell, taken from a squat rack with the hooks at mid-thigh height.',
     steps: [
       'Start standing, holding the bar at hip height with a shoulder-width grip (take it from a rack at thigh height).',
       'Soften your knees and push your hips back, letting the bar slide down your thighs.',
@@ -117,7 +136,9 @@ export const EXERCISES = [
   },
   {
     id: 'trap-bar-deadlift', name: 'Trap Bar Deadlift', group: 'Legs', equipment: 'Barbell', type: 'weight', compound: true,
-    muscles: 'Glutes, quads, hamstrings, back, grip', inc: { lb: 10, kg: 5 }, level: 2,
+    muscles: 'Glutes, quads, hamstrings, back, grip', inc: { lb: 5, kg: 2.5 }, level: 2,
+    aka: ['Hex bar deadlift', 'Hex bar'],
+    find: 'A hexagon-shaped bar you stand inside, with a handle on each side. Usually leaning against a wall or rack near the lifting platforms.',
     steps: [
       'Stand in the middle of the hex/trap bar, feet hip-width.',
       'Hinge and bend your knees to grip the handles. Flat back, chest up.',
@@ -130,7 +151,9 @@ export const EXERCISES = [
   },
   {
     id: 'deadlift', name: 'Barbell Deadlift', group: 'Legs', equipment: 'Barbell', type: 'weight', compound: true,
-    muscles: 'Glutes, hamstrings, back, grip', inc: { lb: 10, kg: 5 }, level: 2,
+    muscles: 'Glutes, hamstrings, back, grip', inc: { lb: 5, kg: 2.5 }, level: 2,
+    aka: ['Conventional deadlift', 'Barbell deadlift'],
+    find: 'A barbell with plates on the floor, ideally on a lifting platform.',
     steps: [
       'Stand with mid-foot under the bar, feet hip-width.',
       'Hinge down and grip the bar just outside your legs. Shins touch the bar.',
@@ -145,6 +168,8 @@ export const EXERCISES = [
   {
     id: 'leg-curl', name: 'Leg Curl (Machine)', group: 'Legs', equipment: 'Machine', type: 'weight', compound: false,
     muscles: 'Hamstrings', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Hamstring curl', 'Seated leg curl', 'Lying leg curl'],
+    find: 'A machine with a padded roller that sits behind your ankles. Seated version: you sit with legs out straight and a pad over your thighs. Lying version: you lie face down. Often next to the leg extension, and some gyms have one 2-in-1 machine for both.',
     steps: [
       'Adjust the machine so your knees line up with its pivot point and the pad sits just above your heels.',
       'Curl your heels toward your glutes as far as you can.',
@@ -157,6 +182,8 @@ export const EXERCISES = [
   {
     id: 'leg-extension', name: 'Leg Extension (Machine)', group: 'Legs', equipment: 'Machine', type: 'weight', compound: false,
     muscles: 'Quads', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Quad extension', 'Knee extension machine'],
+    find: 'A seat with a padded roller in front of your lower shins and a weight stack behind. Often next to the leg curl, or the same 2-in-1 machine.',
     steps: [
       'Adjust the back pad so your knees line up with the machine pivot; the shin pad sits just above your ankles.',
       'Straighten your legs until they are fully extended, squeezing your quads.',
@@ -168,7 +195,9 @@ export const EXERCISES = [
   },
   {
     id: 'hip-thrust', name: 'Hip Thrust', group: 'Legs', equipment: 'Barbell', type: 'weight', compound: true,
-    muscles: 'Glutes, hamstrings', inc: { lb: 10, kg: 5 }, level: 1,
+    muscles: 'Glutes, hamstrings', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Barbell hip thrust', 'Hip thrust machine', 'Glute drive'],
+    find: 'A flat bench plus a barbell with a thick foam bar pad. Some gyms have a hip thrust machine with a back pad and a padded bar or belt across your hips.',
     steps: [
       'Sit on the floor with your upper back against a bench. Roll a padded barbell (or a hip-thrust machine pad) over your hips.',
       'Plant your feet flat, about hip-width, knees bent.',
@@ -182,6 +211,8 @@ export const EXERCISES = [
   {
     id: 'glute-bridge', name: 'Glute Bridge', group: 'Legs', equipment: 'Bodyweight', type: 'bodyweight', compound: false,
     muscles: 'Glutes, hamstrings', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Hip bridge', 'Floor bridge'],
+    find: 'A mat on the floor. No equipment.',
     steps: [
       'Lie on your back, knees bent, feet flat and hip-width apart.',
       'Press through your heels and lift your hips until your body is straight from shoulders to knees.',
@@ -194,6 +225,8 @@ export const EXERCISES = [
   {
     id: 'calf-raise', name: 'Standing Calf Raise', group: 'Legs', equipment: 'Machine', type: 'weight', compound: false,
     muscles: 'Calves', inc: { lb: 10, kg: 5 }, level: 1,
+    aka: ['Standing calf raise machine', 'Calf machine'],
+    find: 'A machine with pads that rest on top of your shoulders and a small step under the balls of your feet. No calf machine? Stand on a step, or use the bottom of a leg press footplate.',
     steps: [
       'Stand with the balls of your feet on the edge of the platform (machine, step, or leg press).',
       'Lower your heels for a deep stretch.',
@@ -207,7 +240,9 @@ export const EXERCISES = [
   // ---------------- Chest ----------------
   {
     id: 'machine-chest-press', name: 'Machine Chest Press', group: 'Chest', equipment: 'Machine', type: 'weight', compound: true,
-    muscles: 'Chest, front shoulders, triceps', inc: { lb: 10, kg: 5 }, level: 1,
+    muscles: 'Chest, front shoulders, triceps', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Seated chest press', 'Chest press machine', 'Hammer Strength chest press', 'Converging chest press'],
+    find: 'An upright seat with a back pad and two handles at chest height that you push forward. Weight-stack versions have a pin; plate-loaded ones (often branded Hammer Strength) have pegs for plates.',
     steps: [
       'Adjust the seat so the handles line up with the middle of your chest.',
       'Sit with your back against the pad, shoulder blades pulled back and down.',
@@ -221,6 +256,8 @@ export const EXERCISES = [
   {
     id: 'db-bench', name: 'Dumbbell Bench Press', group: 'Chest', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Chest, front shoulders, triceps', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Dumbbell chest press', 'DB bench press'],
+    find: 'A flat bench next to the dumbbell rack.',
     steps: [
       'Sit on a flat bench with the dumbbells on your thighs. Lie back and use your knees to help bring them to your chest.',
       'Press the dumbbells up over your chest, palms facing your feet.',
@@ -234,6 +271,8 @@ export const EXERCISES = [
   {
     id: 'incline-db-press', name: 'Incline Dumbbell Press', group: 'Chest', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Upper chest, front shoulders, triceps', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Incline dumbbell bench press', 'Incline DB press'],
+    find: 'An adjustable bench set to a low incline (about 30°, usually the first or second notch), plus dumbbells.',
     steps: [
       'Set a bench to about 30°. Sit back with dumbbells on your thighs and kick them up to your shoulders.',
       'Press up over your upper chest.',
@@ -246,19 +285,23 @@ export const EXERCISES = [
   {
     id: 'bench-press', name: 'Barbell Bench Press', group: 'Chest', equipment: 'Barbell', type: 'weight', compound: true,
     muscles: 'Chest, front shoulders, triceps', inc: { lb: 5, kg: 2.5 }, level: 2,
+    aka: ['Flat bench press', 'Barbell bench'],
+    find: 'A flat bench with a built-in bar rack and safety arms, or a flat bench placed inside a power rack with the safety pins set just below chest height.',
     steps: [
-      'Lie on the bench with your eyes under the bar. Set safety arms if the bench has them, or use a spotter.',
-      'Grip slightly wider than shoulder-width. Pinch your shoulder blades and plant your feet.',
+      'Bench inside a power rack (or on a bench with safety arms) with the safeties set just below your chest at the bottom of the rep. No safeties and no spotter? Use dumbbells instead.',
+      'Lie on the bench with your eyes under the bar. Grip slightly wider than shoulder-width, thumbs wrapped around the bar (never thumbless). Pinch your shoulder blades and plant your feet.',
       'Unrack and hold the bar over your shoulders with straight arms.',
       'Lower to your lower chest with elbows about 45° from your body, touch lightly, then press back up.',
     ],
     cues: ['Bar path: lower chest to over the shoulders', 'Wrists stacked over elbows', 'Butt stays on the bench'],
-    mistakes: ['Bouncing off the chest', 'Benching heavy alone without safeties', 'Elbows flared to 90°'],
+    mistakes: ['Bouncing off the chest', 'Benching alone without safeties', 'Thumbless ("suicide") grip', 'Elbows flared to 90°'],
     alts: ['db-bench', 'machine-chest-press'],
   },
   {
     id: 'push-up', name: 'Push-Up', group: 'Chest', equipment: 'Bodyweight', type: 'bodyweight', compound: true,
     muscles: 'Chest, shoulders, triceps, core', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Press-up', 'Incline push-up'],
+    find: 'Floor space. For easier incline push-ups, put your hands on a bench, box, or a barbell racked in a squat rack.',
     steps: [
       'Hands slightly wider than shoulders, body in a straight line from head to heels.',
       'Lower your chest toward the floor, elbows angled back about 45°.',
@@ -272,6 +315,8 @@ export const EXERCISES = [
   {
     id: 'pec-deck', name: 'Pec Deck / Machine Fly', group: 'Chest', equipment: 'Machine', type: 'weight', compound: false,
     muscles: 'Chest', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Butterfly machine', 'Chest fly machine', 'Pec fly'],
+    find: 'A seated machine with two long arms or handles that swing together in front of you like a hug. Often the same machine as the rear delt fly: the handles flip to the front or back.',
     steps: [
       'Adjust the seat so the handles are at chest height.',
       'With a slight bend in your elbows, bring the handles together in front of your chest in a hugging motion.',
@@ -285,7 +330,9 @@ export const EXERCISES = [
   // ---------------- Back ----------------
   {
     id: 'lat-pulldown', name: 'Lat Pulldown', group: 'Back', equipment: 'Cable', type: 'weight', compound: true,
-    muscles: 'Lats, upper back, biceps', inc: { lb: 10, kg: 5 }, level: 1,
+    muscles: 'Lats, upper back, biceps', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Pulldown machine', 'Lat pull-down', 'Cable pulldown'],
+    find: 'A seat with thigh pads and a long bar hanging from a cable above you. Often on the same tower as the seated cable row.',
     steps: [
       'Set the thigh pad so your legs are locked in snugly.',
       'Grip the bar a bit wider than shoulders, palms facing away.',
@@ -298,7 +345,9 @@ export const EXERCISES = [
   },
   {
     id: 'seated-cable-row', name: 'Seated Cable Row', group: 'Back', equipment: 'Cable', type: 'weight', compound: true,
-    muscles: 'Mid back, lats, rear shoulders, biceps', inc: { lb: 10, kg: 5 }, level: 1,
+    muscles: 'Mid back, lats, rear shoulders, biceps', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Cable row', 'Low row', 'Seated row'],
+    find: 'A long low bench with a footplate and a cable at foot height, usually with a V-shaped close-grip handle. Often on the same tower as the lat pulldown.',
     steps: [
       'Sit with feet on the platform, knees slightly bent, holding the handle with straight arms.',
       'Sit tall, then pull the handle to your belly button, squeezing your shoulder blades together.',
@@ -311,6 +360,8 @@ export const EXERCISES = [
   {
     id: 'db-row', name: 'One-Arm Dumbbell Row', group: 'Back', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Lats, mid back, biceps', inc: { lb: 5, kg: 2 }, level: 1, unilateral: true,
+    aka: ['Single-arm dumbbell row', 'Bent-over dumbbell row'],
+    find: 'A flat bench and one dumbbell.',
     steps: [
       'Place one knee and the same-side hand on a flat bench. Back flat, like a tabletop.',
       'Hold a dumbbell in the other hand with your arm hanging straight down.',
@@ -323,7 +374,9 @@ export const EXERCISES = [
   },
   {
     id: 'chest-supported-row', name: 'Chest-Supported Row', group: 'Back', equipment: 'Machine', type: 'weight', compound: true,
-    muscles: 'Mid back, lats, rear shoulders', inc: { lb: 10, kg: 5 }, level: 1,
+    muscles: 'Mid back, lats, rear shoulders', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Seated row machine', 'Machine row', 'Iso-lateral row', 'Hammer Strength row'],
+    find: 'A seated machine with a pad for your chest and handles in front of you that you pull back. Weight stack or plate-loaded. No machine? Lie face down on an incline bench and row two dumbbells.',
     steps: [
       'Set the chest pad so you can just reach the handles with straight arms.',
       'Keep your chest on the pad and pull the handles back, squeezing your shoulder blades together.',
@@ -336,19 +389,23 @@ export const EXERCISES = [
   {
     id: 'assisted-pullup', name: 'Assisted Pull-Up', group: 'Back', equipment: 'Machine', type: 'assisted', compound: true,
     muscles: 'Lats, upper back, biceps', inc: { lb: 10, kg: 5 }, level: 1,
+    aka: ['Gravitron', 'Assisted pull-up / dip machine', 'Assisted chin-up'],
+    find: 'A tall machine with high handles and a knee pad (or platform) that pushes you up. The weight you pick is help, not load, so more weight is easier. Usually has dip handles too.',
     steps: [
       'Choose the assistance weight on the stack. More assistance makes it easier.',
       'Kneel or stand on the pad and grip the handles just wider than your shoulders.',
       'Pull your chest toward the bar until your chin clears it.',
       'Lower slowly to straight arms.',
     ],
-    cues: ['Log the assistance weight: lower number = stronger', 'Shoulders down before you pull'],
+    cues: ['Log the assistance weight: a lower number means you are stronger', 'Shoulders down before you pull'],
     mistakes: ['Half reps', 'Kicking to get up'],
     alts: ['lat-pulldown'],
   },
   {
     id: 'face-pull', name: 'Face Pull', group: 'Back', equipment: 'Cable', type: 'weight', compound: false,
     muscles: 'Rear shoulders, upper back, rotator cuff', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Rope face pull', 'Cable face pull'],
+    find: 'A cable column (cable tower or functional trainer) with the pulley set at face height and a rope attachment: two short ropes with knobs on the ends.',
     steps: [
       'Set a rope attachment on a cable at face height.',
       'Hold the rope with thumbs pointing back and step back until your arms are straight.',
@@ -362,6 +419,8 @@ export const EXERCISES = [
   {
     id: 'back-extension', name: 'Back Extension', group: 'Back', equipment: 'Bodyweight', type: 'bodyweight', compound: false,
     muscles: 'Lower back, glutes, hamstrings', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Hyperextension', 'Roman chair', '45° back extension'],
+    find: 'An angled bench at 45° with a pad for your hips and rollers to hook your ankles under.',
     steps: [
       'Set the 45° bench so the pad sits just below your hip bones.',
       'Cross your arms over your chest and hinge down, keeping your back flat.',
@@ -376,6 +435,8 @@ export const EXERCISES = [
   {
     id: 'db-shoulder-press', name: 'Seated Dumbbell Shoulder Press', group: 'Shoulders', equipment: 'Dumbbell', type: 'weight', compound: true, perHand: true,
     muscles: 'Shoulders, triceps', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Seated dumbbell press', 'Dumbbell overhead press'],
+    find: 'An adjustable bench set fully upright, plus dumbbells.',
     steps: [
       'Set a bench upright. Sit with your back against it and dumbbells at shoulder height, palms forward.',
       'Press the dumbbells overhead until your arms are straight.',
@@ -387,7 +448,9 @@ export const EXERCISES = [
   },
   {
     id: 'machine-shoulder-press', name: 'Machine Shoulder Press', group: 'Shoulders', equipment: 'Machine', type: 'weight', compound: true,
-    muscles: 'Shoulders, triceps', inc: { lb: 10, kg: 5 }, level: 1,
+    muscles: 'Shoulders, triceps', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Overhead press machine', 'Seated shoulder press machine'],
+    find: 'An upright seat with handles at shoulder height that you press overhead, with a weight stack or plate pegs.',
     steps: [
       'Adjust the seat so the handles start at about shoulder height.',
       'Press overhead until your arms are nearly straight.',
@@ -400,6 +463,8 @@ export const EXERCISES = [
   {
     id: 'ohp', name: 'Barbell Overhead Press', group: 'Shoulders', equipment: 'Barbell', type: 'weight', compound: true,
     muscles: 'Shoulders, triceps, upper back, core', inc: { lb: 5, kg: 2.5 }, level: 2,
+    aka: ['Overhead press', 'OHP', 'Military press', 'Standing press'],
+    find: 'A barbell in a squat rack with the hooks set at upper-chest height.',
     steps: [
       'Set the bar in a rack at upper-chest height. Grip just outside your shoulders.',
       'Unrack it so it rests on your front shoulders. Feet hip-width, glutes squeezed.',
@@ -413,6 +478,8 @@ export const EXERCISES = [
   {
     id: 'lateral-raise', name: 'Dumbbell Lateral Raise', group: 'Shoulders', equipment: 'Dumbbell', type: 'weight', compound: false, perHand: true,
     muscles: 'Side shoulders', inc: { lb: 2.5, kg: 1 }, level: 1,
+    aka: ['Side raise', 'Side lateral raise', 'Lateral delt raise'],
+    find: 'Light dumbbells from the rack. Some gyms also have a lateral raise machine.',
     steps: [
       'Stand holding light dumbbells at your sides.',
       'With a slight bend in your elbows, raise your arms out to the sides until they reach shoulder height.',
@@ -425,6 +492,8 @@ export const EXERCISES = [
   {
     id: 'rear-delt-fly', name: 'Reverse Pec Deck', group: 'Shoulders', equipment: 'Machine', type: 'weight', compound: false,
     muscles: 'Rear shoulders, upper back', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Rear delt machine', 'Reverse fly', 'Rear delt fly'],
+    find: 'Usually the pec deck machine, used facing the chest pad with the handles switched to the back setting.',
     steps: [
       'Sit facing the pec deck pad, handles set to the rear position.',
       'With straight arms, sweep the handles back and out to your sides.',
@@ -439,6 +508,8 @@ export const EXERCISES = [
   {
     id: 'db-curl', name: 'Dumbbell Curl', group: 'Arms', equipment: 'Dumbbell', type: 'weight', compound: false, perHand: true,
     muscles: 'Biceps', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Biceps curl', 'Dumbbell biceps curl'],
+    find: 'Dumbbells from the rack.',
     steps: [
       'Stand tall with a dumbbell in each hand, palms facing forward.',
       'Curl the weights up toward your shoulders, keeping your elbows by your sides.',
@@ -450,7 +521,9 @@ export const EXERCISES = [
   },
   {
     id: 'hammer-curl', name: 'Hammer Curl', group: 'Arms', equipment: 'Dumbbell', type: 'weight', compound: false, perHand: true,
-    muscles: 'Biceps, forearms', inc: { lb: 5, kg: 2 }, level: 1,
+    muscles: 'Brachialis, brachioradialis (forearm), biceps', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Neutral-grip curl'],
+    find: 'Dumbbells from the rack.',
     steps: [
       'Hold dumbbells at your sides with palms facing each other.',
       'Curl up while keeping that neutral grip.',
@@ -463,6 +536,8 @@ export const EXERCISES = [
   {
     id: 'triceps-pushdown', name: 'Cable Triceps Pushdown', group: 'Arms', equipment: 'Cable', type: 'weight', compound: false,
     muscles: 'Triceps', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Cable pushdown', 'Rope pushdown', 'Triceps pressdown'],
+    find: 'A cable column with the pulley at the top and a rope (or short straight bar) attachment.',
     steps: [
       'Attach a rope or straight bar to a high cable.',
       'Elbows by your sides, push the handle down until your arms are straight.',
@@ -475,6 +550,8 @@ export const EXERCISES = [
   {
     id: 'overhead-triceps', name: 'Overhead Triceps Extension', group: 'Arms', equipment: 'Dumbbell', type: 'weight', compound: false,
     muscles: 'Triceps (long head)', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Seated triceps extension', 'Dumbbell overhead extension', 'French press'],
+    find: 'An upright bench and one dumbbell.',
     steps: [
       'Sit on an upright bench holding one dumbbell overhead with both hands.',
       'Lower it behind your head by bending your elbows.',
@@ -489,6 +566,8 @@ export const EXERCISES = [
   {
     id: 'plank', name: 'Plank', group: 'Core', equipment: 'Bodyweight', type: 'time', compound: false,
     muscles: 'Abs, deep core, shoulders', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Front plank', 'Forearm plank'],
+    find: 'A mat. No equipment.',
     steps: [
       'Forearms on the floor, elbows under shoulders.',
       'Step your feet back so your body is a straight line from head to heels.',
@@ -501,6 +580,8 @@ export const EXERCISES = [
   {
     id: 'side-plank', name: 'Side Plank', group: 'Core', equipment: 'Bodyweight', type: 'time', compound: false,
     muscles: 'Obliques, hips', inc: { lb: 0, kg: 0 }, level: 1, unilateral: true,
+    aka: ['Side bridge'],
+    find: 'A mat. No equipment.',
     steps: [
       'Lie on your side with your elbow under your shoulder, legs stacked.',
       'Lift your hips so your body forms a straight line.',
@@ -513,6 +594,8 @@ export const EXERCISES = [
   {
     id: 'dead-bug', name: 'Dead Bug', group: 'Core', equipment: 'Bodyweight', type: 'bodyweight', compound: false,
     muscles: 'Deep core', inc: { lb: 0, kg: 0 }, level: 1, unilateral: true,
+    aka: [],
+    find: 'A mat. No equipment.',
     steps: [
       'Lie on your back with arms reaching to the ceiling and knees bent 90° over your hips.',
       'Press your lower back into the floor.',
@@ -526,6 +609,8 @@ export const EXERCISES = [
   {
     id: 'bird-dog', name: 'Bird Dog', group: 'Core', equipment: 'Bodyweight', type: 'bodyweight', compound: false,
     muscles: 'Core, lower back, glutes', inc: { lb: 0, kg: 0 }, level: 1, unilateral: true,
+    aka: ['Quadruped arm and leg raise'],
+    find: 'A mat. No equipment.',
     steps: [
       'Start on hands and knees, hands under shoulders, knees under hips.',
       'Reach one arm forward and the opposite leg back until both are straight.',
@@ -538,6 +623,8 @@ export const EXERCISES = [
   {
     id: 'pallof-press', name: 'Pallof Press', group: 'Core', equipment: 'Cable', type: 'weight', compound: false,
     muscles: 'Obliques, deep core (anti-rotation)', inc: { lb: 5, kg: 2.5 }, level: 1, unilateral: true,
+    aka: ['Anti-rotation press', 'Cable Pallof press'],
+    find: 'A cable column with a single handle set at chest height (or a resistance band tied to a post).',
     steps: [
       'Set a cable handle at chest height. Stand side-on to the machine, holding the handle at your chest.',
       'Step out until there is tension. Feet shoulder-width, knees soft.',
@@ -551,6 +638,8 @@ export const EXERCISES = [
   {
     id: 'hanging-knee-raise', name: 'Hanging Knee Raise', group: 'Core', equipment: 'Bodyweight', type: 'bodyweight', compound: false,
     muscles: 'Lower abs, hip flexors, grip', inc: { lb: 0, kg: 0 }, level: 2,
+    aka: ['Captain\'s chair knee raise', 'Vertical knee raise (VKR)', 'Power tower knee raise'],
+    find: 'A tall station with padded forearm rests and a back pad (captain\'s chair or power tower), or any pull-up bar to hang from.',
     steps: [
       'Hang from a pull-up bar, or use the arm-rest station (captain\'s chair).',
       'Curl your knees up toward your chest, rolling your pelvis up.',
@@ -563,6 +652,8 @@ export const EXERCISES = [
   {
     id: 'cable-crunch', name: 'Cable Crunch', group: 'Core', equipment: 'Cable', type: 'weight', compound: false,
     muscles: 'Abs', inc: { lb: 5, kg: 2.5 }, level: 1,
+    aka: ['Kneeling cable crunch', 'Rope crunch'],
+    find: 'A cable column with the pulley at the top and a rope attachment. Kneel on a mat facing it.',
     steps: [
       'Attach a rope to a high cable. Kneel facing it, holding the rope beside your head.',
       'Crunch down by curling your ribs toward your hips.',
@@ -575,6 +666,8 @@ export const EXERCISES = [
   {
     id: 'farmers-carry', name: "Farmer's Carry", group: 'Core', equipment: 'Dumbbell', type: 'weight_time', compound: true, perHand: true,
     muscles: 'Grip, core, traps, everything', inc: { lb: 5, kg: 2 }, level: 1,
+    aka: ['Farmer\'s walk', 'Loaded carry'],
+    find: 'Two heavy dumbbells (or kettlebells) and a clear path or turf lane.',
     steps: [
       'Pick up a heavy dumbbell in each hand with a proper squat or hinge.',
       'Stand tall and walk with short, steady steps for the set time.',
@@ -589,10 +682,12 @@ export const EXERCISES = [
   {
     id: 'treadmill', name: 'Treadmill (walk or jog)', group: 'Cardio', equipment: 'Cardio machine', type: 'cardio', compound: false,
     muscles: 'Heart and lungs, legs', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Incline walk'],
+    find: 'The cardio area. Clip the red safety key to your clothes before you start the belt.',
     steps: [
       'Start walking at an easy pace. Clip on the safety key.',
       'Build up to a pace where you can talk but not sing (Zone 2).',
-      'An incline of 3–8% makes walking much harder without impact.',
+      'An incline of 3–8% makes walking much harder without adding much impact.',
     ],
     cues: ['Do not hold the rails', 'Easy days should feel easy'],
     mistakes: ['Holding the handrails on an incline'],
@@ -601,6 +696,8 @@ export const EXERCISES = [
   {
     id: 'bike', name: 'Stationary Bike', group: 'Cardio', equipment: 'Cardio machine', type: 'cardio', compound: false,
     muscles: 'Heart and lungs, quads', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Exercise bike', 'Upright bike', 'Recumbent bike', 'Spin bike'],
+    find: 'The cardio area. Recumbent bikes, with a backrest, are the easiest on your back.',
     steps: [
       'Set the seat so your knee is slightly bent at the bottom of the pedal stroke.',
       'Pedal at an easy-to-moderate resistance.',
@@ -612,6 +709,8 @@ export const EXERCISES = [
   {
     id: 'rower', name: 'Rowing Machine', group: 'Cardio', equipment: 'Cardio machine', type: 'cardio', compound: false,
     muscles: 'Heart and lungs, legs, back', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Rowing machine', 'Erg', 'Concept2'],
+    find: 'The cardio area: a long rail with a sliding seat, footplates with straps, and a handle on a chain. Concept2 is the most common brand.',
     steps: [
       'Strap your feet in. Damper around 3–5.',
       'Push with your legs first, then lean back slightly, then pull the handle to your lower ribs.',
@@ -624,6 +723,8 @@ export const EXERCISES = [
   {
     id: 'elliptical', name: 'Elliptical', group: 'Cardio', equipment: 'Cardio machine', type: 'cardio', compound: false,
     muscles: 'Heart and lungs, legs', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['Cross-trainer'],
+    find: 'The cardio area: two long foot pedals and handles that move with them.',
     steps: ['Step on, hold the handles, and stride at a steady, comfortable pace.'],
     cues: ['Stand tall', 'Push and pull the handles'],
     mistakes: ['Leaning on the handles'],
@@ -632,6 +733,8 @@ export const EXERCISES = [
   {
     id: 'stair-climber', name: 'Stair Climber', group: 'Cardio', equipment: 'Cardio machine', type: 'cardio', compound: false,
     muscles: 'Heart and lungs, glutes, legs', inc: { lb: 0, kg: 0 }, level: 1,
+    aka: ['StairMaster', 'Stepmill'],
+    find: 'The cardio area: a machine with a slowly rotating staircase.',
     steps: ['Start slow. Step with your whole foot and stand tall.'],
     cues: ['Light touch on the rails only for balance'],
     mistakes: ['Hanging on the rails'],

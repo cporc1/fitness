@@ -151,7 +151,8 @@ function saveFinished(session, priorSessions, unit) {
 export function openStartPicker() {
   const state = ctx();
   const phase = currentPhase(state.profile);
-  const nextGym = nextGymTemplate(state.sessions, phase.id);
+  const split = state.profile?.split || 'full';
+  const nextGym = nextGymTemplate(state.sessions, phase.id, split);
   const swimMode = state.settings?.swimMode || 'full';
   const nextSwim = nextSwimWorkout(state.sessions, state.profile?.swimLevel, phase.id, swimMode);
   const poolLen = state.profile?.pool?.len || 25;
@@ -159,7 +160,7 @@ export function openStartPicker() {
   sheet('Start a workout', (close) => {
     const pickGym = (t) => () => { close(); startGym(t); };
     const pickSwim = (w) => () => { close(); startSwim(w); };
-    const gymItems = gymTemplatesForPhase(phase.id).map((t) => listItem({
+    const gymItems = gymTemplatesForPhase(phase.id, split).map((t) => listItem({
       title: `${t.name}${t.id === nextGym.id ? ' · up next' : ''}`,
       sub: `${t.exercises.length} exercises · ${t.focus}`,
       leading: h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),

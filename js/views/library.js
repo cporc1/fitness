@@ -40,7 +40,8 @@ export function exerciseInfo(exId, { compact = false } = {}) {
       h('span', { class: 'chip plain' }, def.equipment),
       def.unilateral ? h('span', { class: 'chip plain' }, 'One side at a time') : null),
     h('p', { class: 'ink-2' }, h('strong', null, 'Works: '), def.muscles),
-    demoMedia(exId, def.name, `${def.name} exercise form tutorial`),
+    demoMedia(exId, def.name),
+    findIt(def),
   ];
   if (def.steps?.length) parts.push(h('div', { class: 'section' }, h('div', { class: 'eyebrow' }, 'How to do it'), h('ol', { class: 'steps' }, def.steps.map((t) => h('li', null, t)))));
   if (def.cues?.length) parts.push(h('div', { class: 'callout' }, h('strong', null, 'Cues: '), def.cues.join(' · ')));
@@ -68,6 +69,23 @@ export function exerciseInfo(exId, { compact = false } = {}) {
   return h('div', { class: 'stack lg' }, ...parts);
 }
 
+/** "Find it in the gym": other names and what the equipment looks like. */
+export function findIt(def) {
+  if (!def.find && !def.aka?.length) return null;
+  return h('div', { class: 'find-card' },
+    h('div', { class: 'eyebrow' }, 'Find it in the gym'),
+    def.aka?.length ? h('div', { class: 'stack', style: { gap: '6px' } },
+      h('span', { class: 'small ink-2' }, 'Also called'),
+      h('div', { class: 'row wrap', style: { gap: '6px' } }, def.aka.map((a) => h('span', { class: 'chip plain' }, a)))) : null,
+    def.find ? h('p', null, h('strong', null, 'Look for: '), def.find) : null);
+}
+
+/** Matches an exercise against a search, including its other names. */
+export function exerciseMatches(e, q) {
+  if (!q) return true;
+  return [e.name, e.muscles, e.equipment, ...(e.aka || [])].some((t) => t && t.toLowerCase().includes(q));
+}
+
 /** Small first-frame thumbnail for list rows (null when there's no photo). */
 export function exThumb(exId) {
   const f = framesFor(exId);
@@ -84,7 +102,7 @@ export function drillInfo(drillId) {
   if (!d) return h('p', { class: 'muted' }, 'Drill not found.');
   return h('div', { class: 'stack lg' },
     h('p', { class: 'ink-2' }, d.purpose),
-    demoVideo(drillId, d.kind === 'stroke' ? `${d.name} swimming technique for beginners` : `${d.name} swim drill`),
+    demoVideo(drillId),
     h('div', { class: 'section' }, h('div', { class: 'eyebrow' }, 'How to do it'), h('ol', { class: 'steps' }, d.steps.map((t) => h('li', null, t)))),
     h('div', { class: 'callout' }, h('strong', null, 'Focus on: '), d.cues.join(' · ')));
 }
@@ -103,14 +121,14 @@ export function exercisePicker({ title = 'Add exercise', suggested = [], onPick 
   const listWrap = h('div', { class: 'card flush' });
   const renderList = () => {
     const q = query.trim().toLowerCase();
-    let items = allExercises().filter((e) => (group === 'All' || e.group === group)
-      && (!q || e.name.toLowerCase().includes(q) || e.muscles.toLowerCase().includes(q) || e.equipment.toLowerCase().includes(q)));
+    let items = allExercises().filter((e) => (group === 'All' || e.group === group) && exerciseMatches(e, q));
     if (!q && group === 'All' && suggested.length) {
       const sug = suggested.map((id) => getExercise(id)).filter(Boolean);
       items = [...sug, ...items.filter((e) => !suggested.includes(e.id))];
     }
     fill(listWrap, h('div', { class: 'list' }, items.length ? items.slice(0, 80).map((e) => listItem({
       title: e.name,
+      leading: exThumb(e.id),
       sub: `${suggested.includes(e.id) && !q ? 'Suggested · ' : ''}${e.group} · ${e.equipment}`,
       onclick: () => onPick(e.id),
       trailing: icon(ICONS.plus, 18),
@@ -178,8 +196,7 @@ registerRoute('library', () => {
         !strokes.length && !drills.length ? h('div', { class: 'list-item muted' }, 'No matches.') : null);
       return;
     }
-    const items = allExercises().filter((e) => (libState.group === 'All' || e.group === libState.group)
-      && (!q || e.name.toLowerCase().includes(q) || e.muscles.toLowerCase().includes(q)));
+    const items = allExercises().filter((e) => (libState.group === 'All' || e.group === libState.group) && exerciseMatches(e, q));
     fill(listWrap, h('div', { class: 'list' }, items.length
       ? items.map((e) => listItem({ title: e.name, sub: `${e.muscles} · ${e.equipment}`, leading: exThumb(e.id), onclick: () => go('exercise', { id: e.id }) }))
       : h('div', { class: 'list-item muted' }, 'No matches.')));

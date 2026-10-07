@@ -3,7 +3,7 @@
 import * as store from '../store.js';
 import { h, icon, ICONS, WEEKDAYS_LONG, todayISO, fmtDate, uid, toNumber, deepClone, fmtClock, put, fill } from '../util.js';
 import { ctx, go, back, registerRoute, render } from '../app.js';
-import { PHASES, gymTemplatesForPhase, WARMUP_GYM, COOLDOWN_GYM } from '../data/plans.js';
+import { PHASES, SPLITS, gymTemplatesForPhase, WARMUP_GYM, COOLDOWN_GYM } from '../data/plans.js';
 import { SWIM_LEVELS, swimTemplateKeys, getSwimWorkout, expandForPool, workoutDistance, STROKES, getDrill, DRILLS, guideForItem } from '../data/swim.js';
 import { getExercise } from '../data/exercises.js';
 import { programWeek, currentPhase, PROGRAM_WEEKS, templateById } from '../program.js';
@@ -15,6 +15,7 @@ import { describeItem, howToLink } from './session-swim.js';
 function slotLabel(slot, custom) {
   if (slot === 'gym') return ['gym', 'Gym · program'];
   if (slot === 'swim') return ['swim', 'Swim · program'];
+  if (slot === 'both') return ['both', 'Gym + Swim'];
   if (slot?.startsWith('custom:')) {
     const t = custom?.templates?.find((c) => c.id === slot.slice(7));
     if (t) return [t.kind, t.name];
@@ -65,8 +66,9 @@ function editDay(i, state) {
     close();
   };
   sheet(WEEKDAYS_LONG[i], (close) => h('div', { class: 'card flush' }, h('div', { class: 'list' },
-    listItem({ title: 'Gym', sub: 'Next program session (alternates A / B)', leading: h('span', { class: 'chip gym' }, 'Gym'), onclick: () => choose('gym', close), trailing: null }),
+    listItem({ title: 'Gym', sub: 'Next program gym session', leading: h('span', { class: 'chip gym' }, 'Gym'), onclick: () => choose('gym', close), trailing: null }),
     listItem({ title: 'Swim', sub: 'Next program swim (technique / endurance)', leading: h('span', { class: 'chip swim' }, 'Swim'), onclick: () => choose('swim', close), trailing: null }),
+    listItem({ title: 'Gym + Swim', sub: 'Both on the same day: lift first, then swim', leading: h('span', { class: 'chip both' }, 'Both'), onclick: () => choose('both', close), trailing: null }),
     ...(state.custom?.templates || []).map((t) => listItem({ title: t.name, sub: 'Your workout', leading: h('span', { class: `chip ${t.kind}` }, t.kind === 'swim' ? 'Swim' : 'Gym'), onclick: () => choose(`custom:${t.id}`, close), trailing: null })),
     listItem({ title: 'Rest', sub: 'Recovery day', leading: h('span', { class: 'chip' }, 'Rest'), onclick: () => choose('rest', close), trailing: null }))));
 }
@@ -75,7 +77,7 @@ function workoutsThisPhase(state) {
   const phase = currentPhase(state.profile);
   const poolLen = state.profile?.pool?.len || 25;
   const unitD = state.profile?.pool?.unit || 'yd';
-  const gym = gymTemplatesForPhase(phase.id).map((t) => listItem({
+  const gym = gymTemplatesForPhase(phase.id, state.profile?.split).map((t) => listItem({
     title: t.name, sub: `${t.exercises.length} exercises · ${t.focus}`,
     leading: h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),
     onclick: () => go('template', { id: t.id }),
@@ -108,6 +110,7 @@ function programSettings(state) {
   const level = SWIM_LEVELS.find((l) => l.id === p.swimLevel) || SWIM_LEVELS[1];
   const swapCount = Object.keys(state.swaps || {}).length;
   return h('div', { class: 'card flush' }, h('div', { class: 'list' },
+    listItem({ title: 'Gym program', sub: (SPLITS.find((x) => x.id === (p.split || 'full')) || SPLITS[0]).name, onclick: () => editSplit(state) }),
     listItem({ title: 'Swim level', sub: level.name, onclick: () => editSwimLevel(p) }),
     listItem({ title: 'Swim workouts', sub: state.settings?.swimMode === 'simple' ? 'Simple: freestyle, breaststroke, kickboard' : 'With technique drills', onclick: () => editSwimMode(state) }),
     listItem({ title: 'Phase', sub: p.phaseOverride ? `Fixed at Phase ${p.phaseOverride}` : 'Automatic (follows the week)', onclick: () => editPhase(p) }),
@@ -120,6 +123,22 @@ function editSwimLevel(p) {
     class: 'choice', 'aria-pressed': String(p.swimLevel === l.id),
     onclick: () => { store.update('profile', (x) => ({ ...x, swimLevel: l.id })); close(); },
   }, h('span', { class: 'c-title' }, l.name), h('span', { class: 'c-sub' }, l.desc)))));
+}
+
+function gymDaysPerWeek(schedule) {
+  return (schedule?.days || []).filter((d) => d === 'gym' || d === 'both').length;
+}
+
+function editSplit(state) {
+  const cur = state.profile?.split || 'full';
+  const gymDays = gymDaysPerWeek(state.schedule);
+  const recommended = gymDays >= 4 ? 'upper-lower' : 'full';
+  sheet('Gym program', (close) => h('div', { class: 'stack lg' },
+    h('p', { class: 'small ink-2' }, `You have ${gymDays} gym ${gymDays === 1 ? 'day' : 'days'} a week. Each muscle grows best when trained about twice a week, so ${recommended === 'full' ? 'full body fits your week best' : 'upper / lower fits your week best'}.`),
+    h('div', { class: 'choice-grid' }, SPLITS.map((o) => h('button', {
+      class: 'choice', 'aria-pressed': String(cur === o.id),
+      onclick: () => { store.update('profile', (x) => ({ ...x, split: o.id })); close(); },
+    }, h('span', { class: 'c-title' }, `${o.name}${o.id === recommended ? ' · recommended' : ''}`), h('span', { class: 'c-sub' }, o.sub))))));
 }
 
 function editSwimMode(state) {
@@ -181,7 +200,7 @@ registerRoute('template', ({ id }, state) => {
   if (isSwim) {
     const poolLen = state.profile?.pool?.len || 25;
     const unitD = state.profile?.pool?.unit || 'yd';
-    const blocks = expandForPool(t.blocks || [], poolLen);
+    const blocks = expandForPool(t.blocks || [], poolLen, state.profile?.swimLevel);
     const dist = workoutDistance(blocks);
     if (dist) put(view, h('div', { class: 'kv' }, h('div', null, h('span', { class: 'k' }, 'Total'), h('span', { class: 'v' }, `${dist} ${unitD}`)), h('div', null, h('span', { class: 'k' }, 'Lengths'), h('span', { class: 'v' }, String(dist / poolLen)))));
     for (const b of blocks) {

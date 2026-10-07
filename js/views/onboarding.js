@@ -53,7 +53,7 @@ function stepWelcome() {
     h('div', { class: 'stack lg' },
       logoMark(),
       h('h1', null, 'Lift & Lap'),
-      h('p', { class: 'ink-2', style: { fontSize: 'var(--fs-lg)' } }, 'A 12-week beginner plan for the gym and the lap pool, with a workout logger, swim sets, progress charts and guides. Everything lives on your phone.')),
+      h('p', { class: 'ink-2', style: { fontSize: 'var(--fs-lg)' } }, 'A 12-week beginner plan for the gym and the lap pool, with a workout logger, swim sets, progress charts and guides. Your data stays private to you.')),
     h('ul', { class: 'checklist' },
       h('li', null, 'Tells you exactly what to do each day, and how much weight to try'),
       h('li', null, 'Logs every set and every length, with a rest timer'),

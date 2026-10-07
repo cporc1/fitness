@@ -72,8 +72,13 @@ export async function discardActive() {
 
 function cleanGymSession(session) {
   // Keep only sets that were completed; drop exercises with nothing done.
+  // The suggestion's text and last-session copy are only needed live; keep saved sessions small.
   const exercises = session.exercises
-    .map((ex) => ({ ...ex, sets: ex.sets.filter((st) => st.done) }))
+    .map((ex) => ({
+      ...ex,
+      sets: ex.sets.filter((st) => st.done),
+      suggestion: ex.suggestion ? { kind: ex.suggestion.kind, weight: ex.suggestion.weight ?? null } : null,
+    }))
     .filter((ex) => ex.sets.length);
   return { ...session, exercises };
 }

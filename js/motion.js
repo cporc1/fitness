@@ -63,7 +63,7 @@ export function ripple(el, point) {
 }
 
 /** A short burst of confetti in the app's colours. Skipped with reduced motion. */
-export function confetti(colors = ['#b5620a', '#f0a23c', '#0a7aa8', '#44b4e0', '#1d7f4a', '#4cc48a']) {
+export function confetti(colors = ['#b16009', '#f0a23c', '#09709a', '#44b4e0', '#1d7f4a', '#4cc48a']) {
   if (reducedMotion()) return;
   const canvas = document.createElement('canvas');
   canvas.className = 'confetti';

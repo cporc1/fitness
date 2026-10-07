@@ -31,7 +31,9 @@ export async function ensureNoActive() {
 
 export async function startGym(template) {
   if (!(await ensureNoActive())) return;
-  const session = buildGymSession(template, ctx());
+  const state = ctx();
+  const session = buildGymSession(template, state);
+  session.view = state.settings?.sessionView === 'focus' ? 'focus' : 'list';
   store.set('active', session);
   go('session');
 }
@@ -80,7 +82,8 @@ function cleanGymSession(session) {
       suggestion: ex.suggestion ? { kind: ex.suggestion.kind, weight: ex.suggestion.weight ?? null } : null,
     }))
     .filter((ex) => ex.sets.length);
-  return { ...session, exercises };
+  const { view, focusIndex, ...rest } = session;
+  return { ...rest, exercises };
 }
 
 /** Finish flow: summary sheet with effort + notes, then save. */

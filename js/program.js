@@ -148,6 +148,19 @@ export function nextDumbbell(w, unit, dir = 1) {
   return [...ladder].reverse().find((x) => x < w - 0.01) ?? ladder[0];
 }
 
+/**
+ * The weight one stepper tap away: the next real dumbbell size up or down,
+ * otherwise the exercise's usual jump (one pin on a machine, 5 lb / 2.5 kg on
+ * a barbell). Never below zero.
+ */
+export function stepWeight(exId, w, unit, dir = 1) {
+  const def = getExercise(exId);
+  const cur = w || 0;
+  if (def?.equipment === 'Dumbbell') return nextDumbbell(cur, unit, dir);
+  const inc = incrementFor(def, unit);
+  return Math.max(0, Math.round((cur + dir * inc) * 100) / 100);
+}
+
 function totalReps(sets, measure) { return sets.reduce((sum, st) => sum + measure(st), 0); }
 
 /**

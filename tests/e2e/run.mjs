@@ -12,7 +12,16 @@ const gymSession = (id, date, tpl, exercises) => ({
 });
 
 const btn = (page, name) => page.getByRole('button', { name }).first();
-const tabTo = (page, name) => page.locator('.tabbar').getByRole('button', { name }).click();
+/** Switch tab and land on its root page (tabs remember their pages, so tap again if needed). */
+async function tabTo(page, name) {
+  const bar = page.locator('.tabbar');
+  await bar.getByRole('button', { name }).click();
+  await bar.locator('[aria-current="page"]', { hasText: name }).waitFor();
+  if (await page.locator('.topbar [aria-label="Back"]').count()) {
+    await bar.getByRole('button', { name }).click();
+    await page.locator('.topbar [aria-label="Back"]').waitFor({ state: 'detached' });
+  }
+}
 
 test('setup, combo day, exercise details, reset', async ({ newPage, open, check, shot }) => {
   const page = await newPage();
@@ -190,6 +199,70 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   await page3.locator('.wday').nth(4).click();
   const fri = await page3.locator('.hero h2').first().textContent();
   check('Future gym days alternate A and B', thu !== fri, `${thu} / ${fri}`);
+});
+
+test('navigation: back, swipe-back, forward, tab stacks, scroll', async ({ newPage, open, check }) => {
+  const page = await newPage();
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  const ll = () => page.evaluate(() => history.state?.ll);
+  await tabTo(page, 'Plan');
+  const item = page.locator('.list-item', { hasText: 'Full Body A' });
+  await item.scrollIntoViewIfNeeded();
+  const y0 = await page.evaluate(() => window.scrollY);
+  await item.click();
+  await btn(page, 'Start this workout').waitFor();
+  await page.locator('.list-item').first().click();
+  await page.locator('.find-card').waitFor();
+  check('Two pages deep = two history entries', (await ll()) === 2, String(await ll()));
+  await page.goBack(); // what the iPhone edge swipe does
+  await btn(page, 'Start this workout').waitFor();
+  check('Swipe-back returns to the workout page', (await ll()) === 1);
+  await page.locator('.tabbar').getByRole('button', { name: 'Today' }).click();
+  await page.locator('.greet').waitFor();
+  check('Switching tab unwinds history', (await ll()) === 0, String(await ll()));
+  await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
+  await btn(page, 'Start this workout').waitFor();
+  check('Plan remembers its open page', (await ll()) === 1, String(await ll()));
+  await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
+  await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
+  check('Tapping the active tab pops to its root', (await ll()) === 0);
+  const y1 = await page.evaluate(() => window.scrollY);
+  check('Scroll position comes back', y0 > 0 && Math.abs(y1 - y0) < 2, `${y0} → ${y1}`);
+  await page.goForward();
+  await btn(page, 'Start this workout').waitFor();
+  check('Forward restores the page', (await ll()) === 1);
+  await btn(page, 'Back').click();
+  await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
+  check('Back button pops through history', (await ll()) === 0);
+});
+
+test('screen changes animate unless motion is reduced', async ({ newPage, open, check }) => {
+  const spy = () => {
+    window.__vt = 0;
+    const orig = Document.prototype.startViewTransition;
+    if (orig) Document.prototype.startViewTransition = function (...args) { window.__vt += 1; return orig.apply(this, args); };
+  };
+  const flow = async (page) => {
+    await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
+    await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
+    await page.locator('.list-item', { hasText: 'Full Body A' }).click();
+    await btn(page, 'Start this workout').waitFor();
+    await page.waitForFunction(() => !document.documentElement.dataset.vt);
+    return page.evaluate(() => window.__vt);
+  };
+  const moving = await newPage({ motion: true });
+  await moving.addInitScript(spy);
+  await open(moving, { profile: PROFILE, schedule: WEEK });
+  check('Tab switch and push use view transitions', (await flow(moving)) >= 2);
+  const still = await newPage();
+  await still.addInitScript(spy);
+  await open(still, { profile: PROFILE, schedule: WEEK });
+  check('Reduced motion (iPhone setting) skips them', (await flow(still)) === 0);
+  const inApp = await newPage({ motion: true });
+  await inApp.addInitScript(spy);
+  await open(inApp, { profile: PROFILE, schedule: WEEK, settings: { reduceMotion: true } });
+  check('Reduce motion in Settings skips them', (await flow(inApp)) === 0);
+  check('Reduce motion marks <html>', await inApp.evaluate(() => document.documentElement.classList.contains('reduce-motion')));
 });
 
 await run();

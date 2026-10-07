@@ -2,7 +2,7 @@
 
 import * as store from '../store.js';
 import { h, icon, ICONS, todayISO, addDays, fmtDate, fmtNum, toNumber, parseClock, KG_PER_LB, put, fill } from '../util.js';
-import { ctx, go, back, tab, registerRoute, render } from '../app.js';
+import { ctx, go, back, replace, registerRoute, render, resetNav } from '../app.js';
 import { resetOnboarding } from './onboarding.js';
 import { stopRest } from '../timer.js';
 import { GUIDES } from '../data/guides.js';
@@ -60,7 +60,7 @@ registerRoute('guide', ({ id }) => {
     topbar({ title: '', onBack: back }),
     pageHead(g.title, `${g.mins} min read`),
     h('article', { class: 'prose' }, blocks),
-    next ? h('button', { class: 'card', style: { textAlign: 'left', cursor: 'pointer' }, onclick: () => { back(); go('guide', { id: next.id }); } },
+    next ? h('button', { class: 'card', style: { textAlign: 'left', cursor: 'pointer' }, onclick: () => replace('guide', { id: next.id }) },
       h('div', { class: 'eyebrow' }, 'Next'), h('strong', null, `${next.title} →`)) : null);
 });
 
@@ -347,7 +347,7 @@ registerRoute('data', (_p, state) => {
           stopRest();
           resetOnboarding();
           store.resetAll();
-          tab('today');
+          resetNav('today');
           toast('All data deleted. Set up again whenever you are ready.');
         },
       }, 'Delete all data')));

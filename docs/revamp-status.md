@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** v2, the pre-revamp app.
-- **Next up:** checkpoint 0.2.
+- **Next up:** checkpoint 0.3.
 
 ## Checkpoints
 
@@ -33,7 +33,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - [x] **0.1 End-to-end suite in the repo.**
   - Adds `tests/e2e/` with Playwright smoke flows covering the regression list in plan section 7.7, and `npm run test:e2e`.
   - Playwright comes from `PLAYWRIGHT_PATH`, or the default install.
-- [ ] **0.2 Router.**
+- [x] **0.2 Router.**
   - New `js/router.js` keeps a separate page stack for each tab.
   - Page changes go through `history.pushState`, so iOS swipe-back works. Tab switches unwind history.
   - Page and tab changes animate with view transitions.
@@ -98,3 +98,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - 2026-10-07: Plan reviewed and approved with changes (plan section 0). Checkpoints written.
 - 2026-10-07: 0.1 done. `npm run test:e2e` runs 4 flows (39 checks) in about 7 seconds; CI runs it too.
+- 2026-10-07: 0.2 done. `js/router.js` keeps per-tab stacks in step with history (`{ ll: depth }` entries); tab switches unwind with `history.go(-depth)`. Transitions are view transitions keyed by `html[data-vt]`. Finishing a session now *replaces* the live screen with its summary. 6 e2e flows pass.

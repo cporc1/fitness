@@ -1,7 +1,7 @@
 // Offline support: precache the app shell, serve it cache-first and refresh
 // in the background. Bump VERSION when shipping changes.
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = `liftlap-${VERSION}`;
 const FONT_CACHE = 'liftlap-fonts';
 
@@ -16,6 +16,8 @@ const SHELL = [
   'icons/apple-touch-icon.png',
   'js/main.js',
   'js/app.js',
+  'js/router.js',
+  'js/motion.js',
   'js/store.js',
   'js/util.js',
   'js/ui.js',

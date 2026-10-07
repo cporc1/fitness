@@ -2,7 +2,7 @@
 
 import * as store from '../store.js';
 import { h, icon, ICONS, todayISO, toISODate, fmtDate, fmtMonth, fmtDuration, fmtNum, parseISODate, relativeDay, put } from '../util.js';
-import { ctx, go, back, registerRoute, render } from '../app.js';
+import { ctx, go, back, tab, registerRoute, render } from '../app.js';
 import { getExercise } from '../data/exercises.js';
 import { sessionVolume, pacePer100 } from '../stats.js';
 import { pageHead, topbar, confirmDialog, toast } from '../ui.js';
@@ -121,7 +121,7 @@ registerRoute('session-detail', ({ id, celebrate }, state) => {
   if (!s) return h('div', { class: 'view' }, topbar({ title: 'Workout', onBack: back }), h('p', { class: 'muted' }, 'This workout was deleted.'));
   const unit = state.profile?.units || 'lb';
   const view = h('div', { class: 'view' },
-    topbar({ title: '', onBack: celebrate ? () => import('../app.js').then((m) => m.tab('today')) : back }),
+    topbar({ title: '', onBack: celebrate ? () => tab('today') : back }),
     h('div', { class: 'page-head' },
       h('div', { class: 'eyebrow' }, `${fmtDate(s.date, { weekday: true, year: true })}${s.week ? ` · Week ${s.week}` : ''}`),
       h('h1', null, s.name)));
@@ -184,7 +184,7 @@ registerRoute('session-detail', ({ id, celebrate }, state) => {
         back();
       },
     }, icon(ICONS.trash, 18), 'Delete')));
-  if (celebrate) put(view, h('button', { class: 'btn pool lg block', onclick: () => import('../app.js').then((m) => m.tab('today')) }, 'Done'));
+  if (celebrate) put(view, h('button', { class: 'btn pool lg block', onclick: () => tab('today') }, 'Done'));
   return view;
 });
 

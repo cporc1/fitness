@@ -72,18 +72,25 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   check('In-session sheet shows "Find it in the gym"', (await page.locator('.sheet .find-card').count()) === 1);
   await page.getByRole('button', { name: 'Close' }).last().click();
   await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
-  await btn(page, 'Save workout').click();
+  await page.locator('.celebrate h1', { hasText: 'Workout complete' }).waitFor();
+  check('Finishing opens the celebration with the stats', (await page.locator('.cel-stats .kpi').count()) === 3);
+  await page.locator('.celebrate .seg button', { hasText: 'Hard' }).click();
+  await page.waitForFunction(() => Object.keys(localStorage).some((k) => k.startsWith('liftlap:v1:sessions-') && localStorage.getItem(k).includes('"rpe":8')));
+  check('"How did it feel" saves to the workout', true);
   await btn(page, 'Done').click();
   await page.locator('.done-card').waitFor();
   check('After the gym: a done card and the swim card', (await page.locator('.done-card').count()) === 1 && (await page.locator('.wcard.swim').count()) === 1);
 
   await page.locator('.wcard.swim').getByRole('button', { name: 'Start swim' }).click();
+  check('"Before you get in" shows before the first rep', (await page.locator('.before-swim').count()) === 1);
+  check('The swim shows what\'s next', (await page.locator('.next-up').count()) === 1);
   await page.locator('.drill-link').first().click();
   check('Swim how-to sheet has a video', (await page.locator('.sheet .video-poster').count()) === 1);
   await page.getByRole('button', { name: 'Close' }).last().click();
   for (let i = 0; i < 4; i++) await btn(page, 'Rep done').click();
+  check('…and hides once you start', (await page.locator('.before-swim').count()) === 0);
   await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
-  await btn(page, 'Save workout').click();
+  await page.locator('.celebrate h1', { hasText: 'Swim complete' }).waitFor();
   await btn(page, 'Done').click();
   await page.getByText('Done today').waitFor();
   check('Both done shows "Done today"', (await page.getByText('Done today').count()) === 1);
@@ -526,6 +533,20 @@ test('focus mode: steppers, auto-advance, survives reload, same data as the list
   await page2.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
   await page2.locator('.pager').waitFor();
   check('Settings can make Focus the starting view', (await page2.getByRole('button', { name: "I'm warmed up" }).count()) === 1);
+});
+
+test('finishing with nothing ticked asks first', async ({ newPage, open, check }) => {
+  const page = await newPage();
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
+  await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
+  await page.locator('.dialog', { hasText: 'No sets ticked yet' }).waitFor();
+  await page.locator('.dialog').getByRole('button', { name: 'Keep going' }).click();
+  check('Keep going stays in the workout', (await page.locator('.session-head').count()) === 1);
+  await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
+  await page.locator('.dialog').getByRole('button', { name: 'Save anyway' }).click();
+  await page.locator('.celebrate').waitFor();
+  check('Save anyway still saves and celebrates', true);
 });
 
 await run();

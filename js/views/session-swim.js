@@ -8,6 +8,7 @@ import { computeSwimDistance, plannedSwimDistance } from '../program.js';
 import { finishSession, discardActive, saveActive } from '../actions.js';
 import { openDrillSheet } from './library.js';
 import { toast } from '../ui.js';
+import { ripple } from '../motion.js';
 import { startRest, stopRest, restBar, beep } from '../timer.js';
 import { openClockSheet } from './session-gym.js';
 
@@ -34,6 +35,8 @@ function lengthsLabel(it, poolLen) {
   const n = it.dist / poolLen;
   return Number.isInteger(n) ? `${n} ${n === 1 ? 'length' : 'lengths'}` : '';
 }
+
+const swimUi = { allOpen: false };
 
 function swimEditor(session, mode) {
   const live = mode === 'live';
@@ -79,7 +82,7 @@ function swimEditor(session, mode) {
     return null;
   }
 
-  function completeRep(cur) {
+  function completeRep(cur, point) {
     cur.item.done[cur.ri] = true;
     const next = nextAfter(cur);
     if (live) {
@@ -93,6 +96,7 @@ function swimEditor(session, mode) {
     }
     persist();
     draw();
+    ripple(body.querySelector('.big-tap'), point);
   }
 
   function focusCard() {
@@ -105,6 +109,7 @@ function swimEditor(session, mode) {
         live ? h('button', { class: 'big-tap good', onclick: () => finishSession(session) }, icon(ICONS.check, 30), 'Finish') : null);
     }
     const { item, block, ri } = cur;
+    const next = nextAfter(cur);
     return h('section', { class: 'focus-card', 'aria-live': 'polite' },
       h('div', { class: 'row between' },
         h('div', { class: 'eyebrow' }, `${block.name} · rep ${ri + 1} of ${item.reps}`),
@@ -113,7 +118,16 @@ function swimEditor(session, mode) {
       item.note ? h('p', { class: 'fc-sub' }, item.note) : null,
       howToLink(item, openDrillSheet, ' →'),
       h('div', { class: 'small ink-2' }, item.rest ? `Rest ${item.rest} s after each rep` : 'No set rest: move straight on'),
-      h('button', { class: 'big-tap', onclick: () => completeRep(cur) }, icon(ICONS.check, 30), 'Rep done'));
+      h('button', { class: 'big-tap', onclick: (e) => completeRep(cur, { x: e.clientX, y: e.clientY }) }, icon(ICONS.check, 30), 'Rep done'),
+      next ? h('div', { class: 'next-up' }, h('span', { class: 'eyebrow' }, 'Next up'), h('span', null, `${next.block.name}: ${describeItem(next.item, unit)}`)) : null);
+  }
+
+  function beforeYouGetIn() {
+    return h('section', { class: 'card before-swim' },
+      h('div', { class: 'row between' }, h('strong', null, 'Before you get in · 2 min'), h('span', { class: 'chip swim' }, icon(ICONS.wave, 14), `${poolLen} ${unit} pool`)),
+      h('ul', { class: 'checklist' }, SWIM_WARMUP_DRY.map((t) => h('li', null, t))),
+      h('p', { class: 'small ink-2' }, h('strong', null, 'Apple Watch? '), `Start a Pool Swim workout and set the pool length to ${poolLen} ${unit === 'yd' ? 'yards' : 'meters'}. It counts lengths and saves to Health; log the sets here.`),
+      h('button', { class: 'btn pool block', onclick: () => { session.dryDone = true; persist(); draw(); } }, 'Got it, I\'m in the water'));
   }
 
   function lapCounter() {
@@ -165,15 +179,17 @@ function swimEditor(session, mode) {
 
   function draw() {
     const parts = [];
-    if (session.focus) parts.push(h('p', { class: 'small ink-2' }, session.focus));
-    if (!isFree) parts.push(focusCard());
-    if (isFree || plannedSwimDistance(session) > 0) parts.push(lapCounter());
-    if (live && !isFree) {
-      parts.push(h('details', { class: 'card' },
-        h('summary', { style: { cursor: 'pointer', fontWeight: 700 } }, 'On-deck warm-up (2 min)'),
-        h('ul', { class: 'checklist' }, SWIM_WARMUP_DRY.map((t) => h('li', null, t)))));
+    const started = (session.blocks || []).some((b) => b.items.some((it) => it.done.some(Boolean)));
+    if (live && !isFree && !started && !session.dryDone) parts.push(beforeYouGetIn());
+    if (session.focus && !isFree) parts.push(h('p', { class: 'small ink-2' }, session.focus));
+    if (isFree) parts.push(lapCounter());
+    else {
+      parts.push(focusCard());
+      const total = session.blocks.reduce((n, b) => n + b.items.length, 0);
+      parts.push(h('details', { class: 'disclosure all-sets', open: swimUi.allOpen || !live, ontoggle: (e) => { if (live) swimUi.allOpen = e.target.open; } },
+        h('summary', null, `All sets · ${total} ${total === 1 ? 'set' : 'sets'}`),
+        h('div', { class: 'stack lg' }, ...blockList(), lapCounter())));
     }
-    if (!isFree) parts.push(...blockList());
     if (live) {
       parts.push(h('div', { class: 'btn-row' },
         h('button', { class: 'btn ghost', onclick: () => discardActive() }, 'Discard'),

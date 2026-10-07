@@ -653,6 +653,28 @@ html[data-vt="day-prev"]::view-transition-new(day-content) { animation: day-in-l
   touch-action: manipulation;
 }
 .big-tap:active { transform: scale(.985); }
+.big-tap { position: relative; overflow: hidden; }
+.ripple { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .38); transform: scale(0); pointer-events: none; animation: ripple 650ms cubic-bezier(.2, .8, .2, 1) forwards; }
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+.next-up { display: flex; flex-direction: column; gap: 2px; font-weight: 600; color: var(--ink-2); }
+.before-swim { border-color: color-mix(in srgb, var(--pool) 35%, var(--line)); }
+.all-sets .swim-block h3 { margin-top: 2px; }
+
+/* ---------- celebration ---------- */
+.celebrate { gap: 20px; padding-top: calc(env(safe-area-inset-top, 0px) + 28px); }
+.cel-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.cel-hero h1 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-3xl); line-height: 1; }
+.cel-ring { position: relative; width: 120px; height: 120px; display: grid; place-items: center; }
+.cel-ring .ring { position: absolute; inset: 0; }
+.cel-ring .ring-track, .cel-ring .ring-fill { stroke-width: 3.6; }
+.cel-check { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--good); color: var(--on-accent); animation: pop-in var(--dur-bouncy) var(--ease-bouncy) 250ms backwards; }
+@keyframes pop-in { from { transform: scale(.3); opacity: 0; } }
+.cel-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cel-stats .kpi { padding: 12px; }
+.cel-stats .kpi-value { font-size: var(--fs-xl); }
+.pr.medal { animation: medal-in var(--dur-bouncy) var(--ease-bouncy) backwards; animation-delay: calc(700ms + var(--i) * 120ms); }
+@keyframes medal-in { from { transform: rotateX(90deg) scale(.9); opacity: 0; } }
+.confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; }
 .big-tap.good { background: var(--good); }
 .lap-count { font-family: var(--font-display); font-weight: 700; font-size: 96px; line-height: .9; text-align: center; font-variant-numeric: tabular-nums; }
 

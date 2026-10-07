@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** Phases 0–2 (router, glass sheets, four tabs, new Today, Workout page, Plan, Learn, new Progress).
-- **Next up:** checkpoint 3.3.
+- **Next up:** Phase 3 pull request, then checkpoint 4.1.
 
 ## Checkpoints
 
@@ -78,7 +78,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - − / + weight and rep steppers that use real dumbbell sizes, machine pins and barbell steps.
   - A floating glass rest pill that opens the pace clock.
 - [x] **3.2 Focus mode.** A toggle in the workout's top bar, plus Settings → Workout → "Start workouts in". List stays the default.
-- [ ] **3.3 Swim screen and celebration.**
+- [x] **3.3 Swim screen and celebration.**
   - The swim focus card dominates; the set list collapses; the dry warm-up shows once.
   - A celebration screen after Finish shows rings, confetti and records.
 - [ ] **Phase 3 PR merged.**
@@ -107,3 +107,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: Phase 1 merged (#4). 2.1 done: `RANGES`, `buckets`, `periodKpis`, `progressSummary`, `setsByMuscleGroup`, `swimDistanceByStroke`, `weekRecords` in `js/stats.js` with 4 new unit tests (27 total).
 - 2026-10-07: 2.2 done. `js/views/progress.js` rewritten: mode switch (pill slides via `html[data-vt=seg]`), range chips, 4 KPIs with count-up and comparison, stacked/single columns, Strength + muscle groups (Workout), pace + strokes (Swim), records, recent, Body and milestones (Total). Charts take `animate` (only on arrival or a switch). History opens from "See all history". 11 e2e flows.
 - 2026-10-07: Phase 2 merged (#5). 3.1 + 3.2 done. `stepWeight()` in `program.js` (unit-tested). The rest timer is a floating glass pill. Focus mode lives in `session-gym.js`: `session.view` ('list' default, or 'focus' from Settings → Workout) and `session.focusIndex` persist with the active session and are stripped on save. A scroll-snap pager has warm-up and cool-down pages; steppers only appear in Focus.
+- 2026-10-07: 3.3 done. Finish now saves right away and `replace`s to the `celebration` route (`js/views/celebration.js`): rings, confetti (`motion.confetti`), stats, medals, effort, and notes/time/distance. A gym session with no sets ticked asks first. The swim screen has a one-time "Before you get in" card with an Apple Watch hint, a ripple on Rep done (`motion.ripple`), "Next up", and all sets in a disclosure. `ring()` moved to `ui.js`. SW v5. 13 e2e flows.

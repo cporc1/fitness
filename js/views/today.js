@@ -4,7 +4,7 @@
 
 import * as store from '../store.js';
 import {
-  h, s, icon, ICONS, todayISO, weekStart, addDays, parseISODate, WEEKDAYS_SHORT, WEEKDAYS_LONG,
+  h, icon, ICONS, todayISO, weekStart, addDays, parseISODate, WEEKDAYS_SHORT, WEEKDAYS_LONG,
   fmtDate, fmtNum, toNumber, daysBetween, put,
 } from '../util.js';
 import { go, registerRoute, render, tab } from '../app.js';
@@ -14,7 +14,7 @@ import { TIPS } from '../data/guides.js';
 import { weekSummary } from '../stats.js';
 import { framesFor } from '../data/media.js';
 import { startGym, startSwim, openStartPicker, openLogOther } from '../actions.js';
-import { sectionHead, sheet, input, field, toast } from '../ui.js';
+import { sectionHead, sheet, input, field, toast, ring } from '../ui.js';
 import { workoutSummary } from './workout.js';
 import { sessionSummary } from './history.js';
 
@@ -234,17 +234,6 @@ function dayContent(state, date, today) {
 }
 
 // ---------------- this week ----------------
-
-function ring(frac, cls, animate) {
-  const r = 15;
-  const c = 2 * Math.PI * r;
-  return s('svg', { class: `ring ${cls}${animate ? ' animate' : ''}`, viewBox: '0 0 40 40', width: 40, height: 40, 'aria-hidden': 'true' },
-    s('circle', { class: 'ring-track', cx: 20, cy: 20, r }),
-    s('circle', {
-      class: 'ring-fill', cx: 20, cy: 20, r,
-      'stroke-dasharray': c.toFixed(2), 'stroke-dashoffset': (c * (1 - Math.min(1, frac))).toFixed(2), style: `--c: ${c.toFixed(2)}`,
-    }));
-}
 
 function weekRings(state, today, entering) {
   const days = state.schedule?.days || [];

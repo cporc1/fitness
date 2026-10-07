@@ -1,7 +1,7 @@
 // Reusable UI pieces: sheets, confirm dialogs, toasts and form controls.
 // (The claude.ai viewer blocks alert/confirm/prompt, so dialogs are built in-page.)
 
-import { h, icon, ICONS, put } from './util.js';
+import { h, s as svg, icon, ICONS, put } from './util.js';
 import { reducedMotion, easing } from './motion.js';
 
 const root = () => document.getElementById('overlay-root');
@@ -244,4 +244,20 @@ export function lanes(kind) {
     }
   }
   return svg;
+}
+
+/**
+ * Progress ring. frac 0–1; `from` (0–1) is where the sweep starts when
+ * animate is true, so a ring can close from its previous value.
+ */
+export function ring(frac, cls, animate = false, from = 0, size = 40) {
+  const r = 15;
+  const c = 2 * Math.PI * r;
+  const off = (f) => (c * (1 - Math.max(0, Math.min(1, f)))).toFixed(2);
+  return svg('svg', { class: `ring ${cls}${animate ? ' animate' : ''}`, viewBox: '0 0 40 40', width: size, height: size, 'aria-hidden': 'true' },
+    svg('circle', { class: 'ring-track', cx: 20, cy: 20, r }),
+    svg('circle', {
+      class: 'ring-fill', cx: 20, cy: 20, r,
+      'stroke-dasharray': c.toFixed(2), 'stroke-dashoffset': off(frac), style: `--c: ${off(from)}`,
+    }));
 }

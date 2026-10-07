@@ -12,6 +12,7 @@ import './views/settings.js';
 import './views/library.js';
 import './views/session-gym.js';
 import './views/session-swim.js';
+import './views/celebration.js';
 import { start } from './app.js';
 
 start();

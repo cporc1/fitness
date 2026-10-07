@@ -8,7 +8,7 @@ import {
 } from '../js/stats.js';
 import {
   programWeek, currentPhase, defaultSchedule, nextGymTemplate, nextSwimWorkout, suggest,
-  buildGymSession, buildSwimSession, computeSwimDistance, planForDay,
+  buildGymSession, buildSwimSession, computeSwimDistance, planForDay, stepWeight,
 } from '../js/program.js';
 import { expandForPool, workoutDistance, SWIM_WORKOUTS, getDrill } from '../js/data/swim.js';
 import { GYM_TEMPLATES } from '../js/data/plans.js';
@@ -352,4 +352,14 @@ test('sets per muscle group, distance per stroke, week records', () => {
   const rec = weekRecords(weeks.map((date, i) => ({ id: String(i), kind: 'gym', date })));
   assert.equal(rec.longestStreak, 2);
   assert.equal(rec.busiest.count, 3);
+});
+
+test('stepper steps: real dumbbell sizes, one pin on machines, never below zero', () => {
+  assert.equal(stepWeight('lateral-raise', 10, 'lb', 1), 12);
+  assert.equal(stepWeight('lateral-raise', 12, 'lb', -1), 10);
+  assert.equal(stepWeight('lateral-raise', null, 'lb', 1), 3);
+  assert.equal(stepWeight('db-bench', 12.5, 'kg', 1), 15);
+  assert.equal(stepWeight('leg-press', 100, 'lb', 1), 110);
+  assert.equal(stepWeight('leg-press', 100, 'lb', -1), 90);
+  assert.equal(stepWeight('leg-press', 5, 'lb', -1), 0);
 });

@@ -1,7 +1,7 @@
 // Starting, saving and finishing sessions, shared by several views.
 
 import * as store from './store.js';
-import { h, icon, ICONS, todayISO, fmtDuration, parseClock, fmtNum } from './util.js';
+import { h, icon, ICONS, todayISO, parseClock } from './util.js';
 import { ctx, go, replace, render, tab, invalidateSessions } from './app.js';
 import {
   buildGymSession, buildSwimSession, buildOtherSession, computeSwimDistance, currentPhase,
@@ -11,7 +11,7 @@ import { gymTemplatesForPhase } from './data/plans.js';
 import { getSwimWorkout, swimTemplateKeys, workoutDistance, expandForPool } from './data/swim.js';
 import { getExercise } from './data/exercises.js';
 import { detectPRs, swimPRs } from './stats.js';
-import { sheet, confirmDialog, toast, input, field, segmented, listItem } from './ui.js';
+import { sheet, confirmDialog, toast, input, field, listItem } from './ui.js';
 import { stopRest } from './timer.js';
 
 export async function ensureNoActive() {
@@ -31,7 +31,9 @@ export async function ensureNoActive() {
 
 export async function startGym(template) {
   if (!(await ensureNoActive())) return;
-  const session = buildGymSession(template, ctx());
+  const state = ctx();
+  const session = buildGymSession(template, state);
+  session.view = state.settings?.sessionView === 'focus' ? 'focus' : 'list';
   store.set('active', session);
   go('session');
 }
@@ -80,11 +82,16 @@ function cleanGymSession(session) {
       suggestion: ex.suggestion ? { kind: ex.suggestion.kind, weight: ex.suggestion.weight ?? null } : null,
     }))
     .filter((ex) => ex.sets.length);
-  return { ...session, exercises };
+  const { view, focusIndex, ...rest } = session;
+  return { ...rest, exercises };
 }
 
-/** Finish flow: summary sheet with effort + notes, then save. */
-export function finishSession(session) {
+/**
+ * Finish: save straight away and open the celebration screen, where effort,
+ * notes, time and distance can still be changed. A gym session with no sets
+ * ticked asks first.
+ */
+export async function finishSession(session) {
   const isSwim = session.kind === 'swim';
   const now = new Date();
   const durationSec = Math.round((now - new Date(session.startedAt)) / 1000);
@@ -95,46 +102,15 @@ export function finishSession(session) {
   if (isSwim) draft.distance = computeSwimDistance(draft);
   else draft = cleanGymSession(draft);
 
-  const doneSets = isSwim ? 0 : draft.exercises.reduce((n, ex) => n + ex.sets.length, 0);
-  const durInput = input({ id: 'fin-dur', value: String(Math.max(1, Math.round(durationSec / 60))), inputmode: 'numeric', type: 'text' });
-  const notes = h('textarea', { class: 'input', id: 'fin-notes', placeholder: 'How did it go? Anything to remember next time?' }, session.notes || '');
-  let rpe = session.rpe || null;
-  const distInput = isSwim ? input({ id: 'fin-dist', value: String(draft.distance || ''), inputmode: 'numeric' }) : null;
-
-  sheet('Finish workout', (close) => h('div', { class: 'stack lg' },
-    h('div', { class: 'kv' },
-      h('div', null, h('span', { class: 'k' }, 'Time'), h('span', { class: 'v' }, fmtDuration(durationSec))),
-      isSwim
-        ? h('div', null, h('span', { class: 'k' }, 'Distance'), h('span', { class: 'v' }, `${fmtNum(draft.distance, 0)} ${draft.pool.unit}`))
-        : h('div', null, h('span', { class: 'k' }, 'Sets done'), h('span', { class: 'v' }, String(doneSets))),
-      isSwim ? null : h('div', null, h('span', { class: 'k' }, 'Exercises'), h('span', { class: 'v' }, String(draft.exercises.length)))),
-    !isSwim && doneSets === 0 ? h('div', { class: 'callout warn' }, 'No sets are ticked yet. Tap the check button on each set you finish, or save anyway to log the session.') : null,
-    h('div', { class: 'field' },
-      h('span', { class: 'label' }, 'How hard was it overall? (RPE)'),
-      segmented([
-        { value: 4, label: 'Easy' }, { value: 6, label: 'Moderate' }, { value: 8, label: 'Hard' }, { value: 10, label: 'Max' },
-      ], rpe, (v) => { rpe = v; }, 'Session effort')),
-    h('div', { class: 'field-row' },
-      field('Duration (min)', durInput),
-      isSwim ? field(`Distance (${draft.pool.unit})`, distInput, 'Adjust if you swam more or less') : null),
-    field('Notes', notes),
-    h('div', { class: 'btn-row' },
-      h('button', { class: 'btn ghost', onclick: close }, 'Keep going'),
-      h('button', {
-        class: `btn ${isSwim ? 'pool' : 'iron'}`,
-        onclick: () => {
-          const mins = Number(durInput.value);
-          draft.durationSec = Number.isFinite(mins) && mins > 0 ? Math.round(mins * 60) : durationSec;
-          draft.notes = notes.value.trim();
-          draft.rpe = rpe;
-          if (isSwim) {
-            const d = Number(distInput.value);
-            if (Number.isFinite(d) && d >= 0) draft.distance = d;
-          }
-          close();
-          saveFinished(draft, sessions, unit);
-        },
-      }, icon(ICONS.check, 20), 'Save workout'))));
+  if (!isSwim && !draft.exercises.length) {
+    const ok = await confirmDialog({
+      title: 'No sets ticked yet',
+      message: 'Tick the check on each set you finish (or tap Complete set). Save the workout anyway?',
+      confirm: 'Save anyway', cancel: 'Keep going',
+    });
+    if (!ok) return;
+  }
+  saveFinished(draft, sessions, unit);
 }
 
 function saveFinished(session, priorSessions, unit) {
@@ -144,7 +120,7 @@ function saveFinished(session, priorSessions, unit) {
   store.saveSession(session);
   store.set('active', null, { silent: true });
   invalidateSessions();
-  replace('session-detail', { id: session.id, celebrate: true });
+  replace('celebration', { id: session.id });
 }
 
 /** Sheet listing every workout you can start right now. */

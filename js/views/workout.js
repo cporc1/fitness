@@ -5,6 +5,7 @@
 import * as store from '../store.js';
 import { h, icon, ICONS, fmtClock, put } from '../util.js';
 import { go, back, registerRoute } from '../app.js';
+import { sharedHero } from '../router.js';
 import { PHASES, WARMUP_GYM, COOLDOWN_GYM } from '../data/plans.js';
 import { SWIM_LEVELS, expandForPool, workoutDistance, guideForItem } from '../data/swim.js';
 import { getExercise } from '../data/exercises.js';
@@ -67,7 +68,7 @@ registerRoute('workout', ({ id }, state) => {
       title: '', onBack: back,
       actions: isCustom ? [h('button', { class: 'icon-btn', 'aria-label': 'Edit workout', onclick: () => go('builder', { id }) }, icon(ICONS.edit))] : [],
     }),
-    h('section', { class: `wk-hero ${swim ? 'swim' : 'gym'}` },
+    h('section', { class: `wk-hero ${swim ? 'swim' : 'gym'}`, style: sharedHero.id === id ? { viewTransitionName: 'wk-hero' } : null },
       lanes(swim ? 'swim' : 'gym'),
       h('div', { class: 'eyebrow' }, eyebrowFor(t, state)),
       h('h1', null, t.name),

@@ -7,6 +7,7 @@ import { getExercise } from '../data/exercises.js';
 import { sessionVolume, pacePer100 } from '../stats.js';
 import { pageHead, topbar, confirmDialog, toast } from '../ui.js';
 import { openLogOther } from '../actions.js';
+import { showDay } from './today.js';
 import { fmtSet, openExerciseSheet } from './library.js';
 import { describeItem } from './session-swim.js';
 
@@ -61,7 +62,7 @@ function monthGrid(sessions) {
     cells.push(h('button', {
       class: `m-day${inMonth ? '' : ' out'}${iso === today ? ' today' : ''}`, type: 'button',
       'aria-label': `${fmtDate(iso)}${kinds.length ? `: ${kinds.length} sessions` : ''}`,
-      onclick: () => go('day', { date: iso }),
+      onclick: () => showDay(iso),
     }, h('span', null, String(date.getDate())), h('span', { class: 'm-dots' }, kinds.slice(0, 3).map((k) => h('i', { class: k })))));
   }
   const shift = (d) => {

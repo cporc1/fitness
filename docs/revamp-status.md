@@ -24,8 +24,11 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** Phases 0–3 (everything except the Phase 4 polish).
-- **Next up:** Phase 4 pull request. After that the revamp is complete.
+- **Live on `main`:** all phases (0–4). The revamp is complete.
+- **Next up:** nothing required. To check on a real iPhone:
+  - Edge swipe-back feel, and that it never animates twice.
+  - Smoothness of the glass, caustics and card stack.
+  - Whether the `black-translucent` status bar is worth it (white status text on the light theme).
 
 ## Checkpoints
 
@@ -92,7 +95,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Accessibility: contrast and reduce motion.
   - Performance: at most 3 blur layers.
   - A dark-mode pass.
-- [ ] **Phase 4 PR merged.**
+- [x] **Phase 4 PR merged.** [cporc1/fitness#7](https://github.com/cporc1/fitness/pull/7)
 
 ## Log
 
@@ -119,3 +122,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - New `tests/contrast.test.mjs` checks WCAG AA (4.5:1) for every text/background token pair in light and dark mode. Fixes: `--muted` `#5e6e76`, `--pool` `#09709a`, `--iron` `#b16009`, plus new `--iron-ink` and `--good-ink` for text on tinted chips.
   - A new e2e flow checks ≤ 3 blur layers (scrolled tab, open sheet, resting in a workout), the card stack opening and closing, and that nothing loops with Reduce motion.
   - Dark mode: selected segments use `--pill`.
+- 2026-10-07: Phase 4 merged (#7). All checkpoints done; the live site serves service worker v6.

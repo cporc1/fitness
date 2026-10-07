@@ -8,6 +8,7 @@ import { computeSwimDistance, plannedSwimDistance, routineTarget } from '../prog
 import { finishSession, discardActive, saveActive } from '../actions.js';
 import { openDrillSheet, openExerciseSheet, exThumb } from './library.js';
 import { getExercise } from '../data/exercises.js';
+import { swimDemo } from '../swim-anim.js';
 import { toast, listItem } from '../ui.js';
 import { ripple } from '../motion.js';
 import { startRest, stopRest, restBar, beep } from '../timer.js';
@@ -111,11 +112,15 @@ function swimEditor(session, mode) {
     }
     const { item, block, ri } = cur;
     const next = nextAfter(cur);
+    const guide = guideForItem(item);
+    const demo = guide ? swimDemo(guide, { name: getDrill(guide)?.name, pausable: false }) : null;
+    demo?.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     return h('section', { class: 'focus-card', 'aria-live': 'polite' },
       h('div', { class: 'row between' },
         h('div', { class: 'eyebrow' }, `${block.name} · rep ${ri + 1} of ${item.reps}`),
         lengthsLabel(item, poolLen) ? h('span', { class: 'chip swim' }, lengthsLabel(item, poolLen)) : null),
       h('div', { class: 'fc-what' }, describeItem(item, unit)),
+      demo ? h('button', { class: 'fc-demo', type: 'button', 'aria-label': `How to: ${getDrill(guide)?.name}`, onclick: () => openDrillSheet(guide) }, demo) : null,
       item.note ? h('p', { class: 'fc-sub' }, item.note) : null,
       howToLink(item, openDrillSheet, ' →'),
       h('div', { class: 'small ink-2' }, item.rest ? `Rest ${item.rest} s after each rep` : 'No set rest: move straight on'),

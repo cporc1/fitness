@@ -1057,6 +1057,33 @@ html[data-vt="seg"]::view-transition-old(root), html[data-vt="seg"]::view-transi
 }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation: none !important; transition: none !important; }
 
+/* ---------- swim demos (js/swim-anim.js) ---------- */
+.swim-anim { display: block; width: 100%; height: auto; border-radius: 18px; background: color-mix(in srgb, var(--pool) 5%, var(--surface)); }
+.swim-anim .sa-water { fill: color-mix(in srgb, var(--pool) 15%, var(--surface)); }
+.swim-anim .sa-surface { fill: none; stroke: color-mix(in srgb, var(--pool) 60%, transparent); stroke-width: 2; stroke-linecap: round; }
+.swim-anim .sa-lane { stroke: color-mix(in srgb, var(--pool) 28%, transparent); stroke-width: 3; stroke-dasharray: 14 10; }
+.swim-anim .sa-floor { fill: color-mix(in srgb, var(--pool) 26%, var(--surface)); }
+.swim-anim .sa-wall { fill: color-mix(in srgb, var(--ink) 16%, var(--surface)); }
+.swim-anim .sa-limb { stroke: var(--ink); stroke-linecap: round; }
+.swim-anim .sa-far { opacity: .36; }
+.swim-anim .sa-arm { stroke-width: 8.5; }
+.swim-anim .sa-leg { stroke-width: 10; }
+.swim-anim .sa-foot { stroke-width: 6; }
+.swim-anim .sa-torso { stroke-width: 17; }
+.swim-anim .sa-head, .swim-anim .sa-fist { fill: var(--ink); }
+.swim-anim .sa-cap, .swim-anim .sa-board, .swim-anim .sa-buoy ellipse { fill: var(--iron); }
+.swim-anim .sa-bubble { fill: none; stroke: var(--pool); stroke-width: 1.5; }
+.swim-anim .sa-breath, .swim-anim .sa-splash { fill: none; stroke: var(--pool); stroke-width: 1.8; stroke-linecap: round; }
+.swim-anim .sa-caption { font-family: var(--font-display); font-size: 13px; font-weight: 700; fill: var(--ink-2); }
+.swim-anim.no-caption .sa-caption { display: none; }
+.swim-anim.thumb { width: 56px; height: 36px; border-radius: 8px; flex: none; }
+.wc-thumbs .swim-anim.thumb { width: 72px; height: 46px; border-radius: 12px; }
+.tile-anim { overflow: hidden; }
+.tile-anim .swim-anim { width: 100%; height: 100%; border-radius: 0; }
+.fc-demo { display: block; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 16px; overflow: hidden; }
+.fc-demo .swim-anim { border-radius: 16px; aspect-ratio: 5 / 2; }
+.swim-anim.paused { opacity: .85; }
+
 /* ---------- demo media ---------- */
 .demo-figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
 .demo {

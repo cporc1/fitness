@@ -403,3 +403,22 @@ test('each workout gets the warm-up for its day', () => {
   assert.equal(routineTarget({ ex: 'leg-swing', reps: 10 }), '10 per side');
   assert.equal(routineTarget({ ex: 'bike', min: 4 }), '4 min');
 });
+
+test('every swim stroke and drill has an animated demo with sane poses', async () => {
+  const { SWIM_DEMO_IDS, swimPose, track } = await import('../js/swim-anim.js');
+  const { DRILLS, STROKE_GUIDES } = await import('../js/data/swim.js');
+  for (const d of [...DRILLS, ...STROKE_GUIDES]) assert.ok(SWIM_DEMO_IDS.includes(d.id), `${d.id} has a demo`);
+  const finite = (v) => Number.isFinite(v);
+  for (const id of SWIM_DEMO_IDS) {
+    for (let t = 0; t < 1; t += 0.05) {
+      const p = swimPose(id, t);
+      const nums = [...p.hip, p.torso, ...p.arms.flatMap((a) => [a.a, a.f]), ...p.legs.flatMap((l) => [l.t, l.s])];
+      assert.ok(nums.every(finite), `${id} at ${t.toFixed(2)}`);
+      assert.ok(p.hip[0] > 0 && p.hip[0] < 300 && p.hip[1] > 0 && p.hip[1] < 150, `${id}: swimmer in the picture at ${t.toFixed(2)}`);
+    }
+  }
+  // Tracks loop without a jump: one cycle later an angle has gained a full turn.
+  const a = track([[0, 4], [0.5, 180], [1, 364]]);
+  assert.ok(Math.abs(a(1) - a(0) - 360) < 1e-9);
+  assert.ok(Math.abs(a(0.999) - a(1)) < 2);
+});

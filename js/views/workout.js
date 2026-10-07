@@ -13,6 +13,7 @@ import { templateById, suggest, warmupFor, cooldownFor, routineMinutes, routineT
 import { startGym, startSwim } from '../actions.js';
 import { topbar, listItem, confirmDialog, lanes } from '../ui.js';
 import { exThumb, openExerciseSheet, openDrillSheet, targetText, routineRows } from './library.js';
+import { swimThumb } from '../swim-anim.js';
 import { describeItem } from './session-swim.js';
 
 const EQUIPMENT_WORD = { Machine: 'machines', Dumbbell: 'dumbbells', Barbell: 'barbell', Cable: 'cables', Bodyweight: 'bodyweight', 'Cardio machine': 'cardio' };
@@ -106,7 +107,7 @@ registerRoute('workout', ({ id }, state) => {
           return listItem({
             title: `${it.reps} × ${describeItem(it, sum.unitD)}`,
             sub: [rest, lengths, it.note].filter(Boolean).join(' · '),
-            leading: h('span', { class: 'sr-icon swim' }, icon(ICONS.wave)),
+            leading: (guide && swimThumb(guide)) || h('span', { class: 'sr-icon swim' }, icon(ICONS.wave)),
             onclick: guide ? () => openDrillSheet(guide, { target: `${it.reps} × ${describeItem(it, sum.unitD)} · ${rest}` }) : null,
             trailing: guide ? undefined : null,
           });

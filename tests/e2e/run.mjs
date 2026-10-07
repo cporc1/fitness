@@ -90,8 +90,9 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   await page.locator('.wcard.swim').getByRole('button', { name: 'Start swim' }).click();
   check('"Before you get in" shows before the first rep', (await page.locator('.before-swim').count()) === 1);
   check('The swim shows what\'s next', (await page.locator('.next-up').count()) === 1);
+  check('The swim card shows the stroke animation', (await page.locator('.focus-card .swim-anim').count()) === 1);
   await page.locator('.drill-link').first().click();
-  check('Swim how-to sheet has a video', (await page.locator('.sheet .video-poster').count()) === 1);
+  check('Swim how-to sheet has an animation and a video', (await page.locator('.sheet .swim-anim').count()) === 1 && (await page.locator('.sheet .video-poster').count()) === 1);
   await page.getByRole('button', { name: 'Close' }).last().click();
   for (let i = 0; i < 4; i++) await btn(page, 'Rep done').click();
   check('…and hides once you start', (await page.locator('.before-swim').count()) === 0);
@@ -618,6 +619,38 @@ test('warm-up and cool-down: photos, stretches first, ticks, hold timer', async 
   check('The celebration counts the warm-up and cool-down', (await page.locator('.routine-chips').textContent()).replace(/\s+/g, ' ').includes('Warm-up 3/7'));
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('liftlap:v1:sessions-2026-10')).items[0]);
   check('The saved workout keeps a short record of them', saved.warmup.length === 7 && saved.warmup.filter((x) => x.done).length === 3 && !('part' in saved.warmup[0]));
+});
+
+test('swim demos: everywhere a stroke or drill appears; moving unless motion is reduced', async ({ newPage, open, check }) => {
+  const pose = (page, sel) => page.locator(sel).first().evaluate((svg) => [...svg.querySelectorAll('.sa-limb')].map((l) => l.getAttribute('x2')).join(','));
+  const page = await newPage({ motion: true });
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  check('Today\'s swim card shows its strokes and drills', (await page.locator('.wcard.swim .swim-anim.thumb').count()) > 0);
+  await page.locator('.wcard.swim').getByRole('button', { name: 'Details' }).click();
+  await page.locator('.wk-hero').waitFor();
+  check('Every swim set on the Workout page has a still', (await page.locator('.list-item .swim-anim.thumb').count()) === (await page.locator('.session-row .list-item, .card.flush .list-item').count()));
+  await tabTo(page, 'Learn');
+  check('Learn: each stroke tile is animated', (await page.locator('.tile .swim-anim').count()) === 4);
+  await page.locator('.tile', { hasText: 'Breaststroke' }).click();
+  await page.locator('.sheet .swim-anim').waitFor();
+  await page.waitForTimeout(150);
+  const a = await pose(page, '.sheet .swim-anim');
+  await page.waitForTimeout(400);
+  check('The swimmer moves', a !== (await pose(page, '.sheet .swim-anim')));
+  await page.locator('.sheet .swim-anim').click();
+  await page.waitForTimeout(100);
+  const b = await pose(page, '.sheet .swim-anim');
+  await page.waitForTimeout(400);
+  check('Tap pauses it', b === (await pose(page, '.sheet .swim-anim')));
+
+  const still = await newPage();
+  await open(still, { profile: PROFILE, schedule: WEEK });
+  await tabTo(still, 'Learn');
+  await still.locator('.tile', { hasText: 'Backstroke' }).click();
+  await still.locator('.sheet .swim-anim').waitFor();
+  const c = await pose(still, '.sheet .swim-anim');
+  await still.waitForTimeout(500);
+  check('With reduced motion it holds still', c === (await pose(still, '.sheet .swim-anim')));
 });
 
 test('finishing with nothing ticked asks first', async ({ newPage, open, check }) => {

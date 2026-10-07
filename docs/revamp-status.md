@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** all phases (0–4), plus fix 5.1. Checkpoints 5.2 and 5.3 are on the working branch.
-- **Next up:** checkpoint 5.4 in the follow-up round below.
+- **Live on `main`:** all phases (0–4), plus fix 5.1. Checkpoints 5.2–5.4 are on the working branch, in the follow-up PR.
+- **Next up:** merge the follow-up PR. After that, nothing is required.
 - **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
@@ -112,9 +112,9 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Between sets and exercises, the rest takes over the screen: a big countdown, what's up next, and −15 s / +15 s / Skip.
   - When the rest ends, it says Go.
   - The list view keeps the floating rest pill.
-- [ ] **5.4 Animated swim demos.**
+- [x] **5.4 Animated swim demos.**
   - Strokes and drills get looping animations, like the exercise photos.
-  - Only openly licensed animations are used, and each is credited.
+  - They're original drawings made in code, so there's nothing to license or credit. Openly licensed animations didn't cover the drills.
 - [ ] **Follow-up PR merged.**
 
 ## Log
@@ -172,3 +172,16 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - "Show workout" tucks it into the rest bar (`restBar({ visible })`); tapping the bar brings it back.
   - While a sheet scales the page, `html.sheet-open .rest-screen` pins it to the visible part.
   - The list view keeps the rest bar and the pace clock.
+- 2026-10-07: 5.4 done.
+  - `js/swim-anim.js` draws a side-view swimmer in SVG for all 4 stroke guides and all 15 drills:
+    - keyframed joint angles (`track()` for Catmull-Rom loops, `poses()` for pose-to-pose);
+    - `reach()` keeps feet on the floor and hands on the wall;
+    - captions name the phase; bubbles show breathing out; there is a kickboard, buoy and wall where the drill uses them.
+  - It runs only while on screen, at up to 30 fps; a tap pauses it. With reduced motion it holds one pose.
+  - Where it shows:
+    - the how-to sheet (above the video);
+    - stills on Today's swim card and the Workout page rows;
+    - the live swim card (tap for the how-to);
+    - animated stroke tiles and drill stills in Learn.
+  - The 18 new stretches and moves also got short demo videos, each checked to exist and allow embedding.
+  - SW v9.

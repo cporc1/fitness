@@ -7,6 +7,7 @@ import { GROUPS, getExercise, allExercises } from '../data/exercises.js';
 import { getDrill } from '../data/swim.js';
 import { framesFor } from '../data/media.js';
 import { demoFrames, demoVideo } from '../media.js';
+import { swimDemo, swimThumb } from '../swim-anim.js';
 import { exerciseHistory, exerciseRecords } from '../stats.js';
 import { routineTarget } from '../program.js';
 import { listItem, sheet, input, field, select, toast, confirmDialog } from '../ui.js';
@@ -154,7 +155,9 @@ export function openExerciseSheet(exId, opts = {}) {
 export function drillInfo(drillId, { target } = {}) {
   const d = getDrill(drillId);
   if (!d) return h('p', { class: 'muted' }, 'Drill not found.');
+  const demo = swimDemo(drillId, { name: d.name });
   return h('div', { class: 'stack lg' },
+    demo ? h('figure', { class: 'demo-figure' }, demo, h('figcaption', { class: 'xs muted' }, 'Seen from the side, looping. Tap to pause.')) : null,
     h('p', { class: 'ink-2' }, d.purpose),
     target ? h('div', { class: 'target-card swim' }, h('div', { class: 'eyebrow' }, 'In this workout'), h('div', { class: 'tc-main' }, target)) : null,
     demoVideo(drillId),

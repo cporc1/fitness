@@ -6,14 +6,16 @@ A phone-first training app for a beginner with a full gym and a lap pool: a 12-w
 
 | Area | What you get |
 | --- | --- |
-| **Today** | What to do today (one card per session; gym + swim days show both, in order), a week strip, a one-tap start, weekly stats and streak. Optional daily check-in (water, sleep, protein, body weight) behind Settings → Body & daily habits |
-| **Plan** | The 12-week program in three phases (Foundation → Build → Progress), your editable weekly schedule (gym / swim / gym + swim / rest per day), full-body or upper/lower program, every workout in the current phase (tap any exercise for its demo), and a builder for your own gym or swim workouts |
+| **Today** | The plan for any day: tap a day in the week strip (or swipe to other weeks) and the cards update in place. Each session is a compact card with exercise photos, Start and Details; gym + swim days show both, in order. Past days show what you did, rest days a tip, and a rings card tracks this week's workouts and swims. Settings live behind the gear |
+| **Workout page** | Details for any workout: time, equipment, warm-up, every exercise or swim set with its target, and a Start button. Tap any row for its how-to sheet |
+| **Plan** | Where you are in the 12-week program (three phases: Foundation → Build → Progress), your week as seven day chips (gym / swim / both / rest), the workouts in rotation with what's up next, your own workouts and a builder, and program settings (full body or upper/lower, swim level, Simple swims) |
 | **Gym logger** | Sets × weight × reps with last session's numbers alongside, automatic weight suggestions (double progression), a rest timer drawn as a pool pace clock, exercise swaps (today only or permanently), how-to for every exercise, warm-up checklist, PR detection |
 | **Swim logger** | Warm-up / drills / main set / cool-down with a big "Rep done" button, automatic rest countdown, stroke and drill how-tos with video, distance tracking in your pool's units (25 yd, 25 m or 50 m), a free-swim lap counter, and a Simple mode (just freestyle, breaststroke and kickboard) |
-| **Log** | Calendar and list of every session, details, edit and delete, plus "log another activity" for walks, classes and sports |
-| **Progress** | Workouts per week, estimated 1-rep max per lift, weekly volume, swim distance and pace, body weight and waist trends, milestones |
-| **Library** | 50 gym exercises with looping start/finish demo photos, an in-app demo video, step-by-step instructions, and "Find it in the gym" (other names the machine goes by and what it looks like); 4 swim strokes and 15 drills with in-app videos |
-| **More** | 12 beginner guides, tools (plate calculator, 1RM, swim pace, calories & protein), settings, backup/restore and "Delete all data" to start over after a test run |
+| **Progress** | Workouts per week, estimated 1-rep max per lift, weekly volume, swim distance and pace, milestones, and History: a calendar and list of every session with details, edit, delete and "log another activity" |
+| **Learn** | 50 gym exercises with looping start/finish photos, an in-app video, step-by-step instructions and "Find it in the gym" (other names the machine goes by and what it looks like); 4 swim strokes and 15 drills with in-app videos; 12 beginner guides; tools (plate calculator, 1RM, swim pace, calories & protein). Search finds machines by their other names |
+| **Settings** | Name and units, pool, rest timer, theme, Reduce motion and Reduce transparency, optional body and habit tracking, backup/restore and "Delete all data" to start over after a test run |
+
+Moving around: every page you open can be closed by swiping from the left edge, each tab remembers where you were, and exercises, strokes and drills open as sheets you drag down to close.
 
 ### The program
 
@@ -38,7 +40,7 @@ One-time setup (GitHub Pages is free for public repositories; a private one need
 
 GitHub holds the app, not your workouts. Your workouts, weights and body measurements are personal, and a public repository would show them to everyone, so they are stored privately on your phone (`localStorage`, one small document per area plus one per month of workouts).
 
-- **More → Backup & data → Export backup** creates a backup file. On iPhone choose **Save to Files → iCloud Drive** so it survives losing or replacing your phone. **Restore backup** loads one back.
+- **Settings (gear on Today) → Backup & data → Export backup** creates a backup file. On iPhone choose **Save to Files → iCloud Drive** so it survives losing or replacing your phone. **Restore backup** loads one back.
 - The app reminds you on the Today screen when your last backup is more than three weeks old.
 - If the app is opened as a Claude artifact instead, the same documents are mirrored to that artifact's private per-user store (`data/users/<you>/…`). That copy is separate from the GitHub Pages one; move data between them with export and restore.
 
@@ -58,7 +60,9 @@ Layout:
 index.html            entry page (PWA meta, manifest, fonts)
 sw.js                 offline cache; bump VERSION when shipping changes
 css/app.css           all styles; colour tokens for light and dark at the top
-js/app.js             navigation and rendering
+js/app.js             state access, tab bar and rendering
+js/router.js          page stacks per tab, history (swipe-back) and view transitions
+js/motion.js          reduce-motion/transparency preferences and spring easings
 js/store.js           storage (localStorage + optional Claude cloud mirror), backup
 js/program.js         phases, schedule, next workout, weight suggestions
 js/stats.js           1RM, PRs, weekly summaries, nutrition, plates

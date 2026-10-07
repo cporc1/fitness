@@ -12,6 +12,13 @@ const gymSession = (id, date, tpl, exercises) => ({
 });
 
 const btn = (page, name) => page.getByRole('button', { name }).first();
+const exerciseRow = (page) => page.locator('.list-item', { has: page.locator('.ex-thumb') }).first();
+const closeSheet = (page) => page.locator('.sheet').last().getByRole('button', { name: 'Close' }).click();
+async function openSettings(page) {
+  await tabTo(page, 'Today');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('.topbar .title', { hasText: 'Settings' }).waitFor();
+}
 /** Switch tab and land on its root page (tabs remember their pages, so tap again if needed). */
 async function tabTo(page, name) {
   const bar = page.locator('.tabbar');
@@ -38,22 +45,26 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   check('Gym program choice shown', (await page.getByText('Full body · recommended').count()) === 1);
   await btn(page, 'Continue').click();
   await btn(page, 'Start my plan').click();
-  await page.locator('.hero').first().waitFor();
-  check('Today shows two session cards on a combo day', (await page.locator('.hero').count()) === 2);
+  await page.locator('.wcard').first().waitFor();
+  check('Today shows two session cards on a combo day', (await page.locator('.wcard').count()) === 2);
+  check('Combo day cards are joined by "then"', (await page.locator('.then').count()) === 1);
   check('No daily check-in by default', (await page.getByText('Daily check-in').count()) === 0);
   await shot(page, 'today-combo');
 
-  await page.locator('.hero-link').first().click();
-  await page.locator('.demo').first().waitFor();
-  check('Exercise details have two demo photos', (await page.locator('.demo img').count()) === 2);
-  check('Exercise details have "Find it in the gym"', (await page.locator('.find-card').count()) === 1);
-  check('Exercise details have a video poster', (await page.locator('.video-poster').count()) === 1);
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Details' }).click();
+  await page.locator('.wk-hero').waitFor();
+  await exerciseRow(page).click();
+  await page.locator('.sheet .demo').first().waitFor();
+  check('Exercise sheet has two demo photos', (await page.locator('.sheet .demo img').count()) === 2);
+  check('Exercise sheet has "Find it in the gym"', (await page.locator('.sheet .find-card').count()) === 1);
+  check('Exercise sheet has a video poster', (await page.locator('.sheet .video-poster').count()) === 1);
   check('No links leave the app', (await page.locator('a[target=_blank]').count()) === 0);
-  await page.locator('.video-poster').click();
-  check('Video turns into an inline player', (await page.locator('.video iframe').count()) === 1);
+  await page.locator('.sheet .video-poster').click();
+  check('Video turns into an inline player', (await page.locator('.sheet .video iframe').count()) === 1);
+  await closeSheet(page);
   await btn(page, 'Back').click();
 
-  await page.locator('.hero.gym').getByRole('button', { name: 'Start workout' }).click();
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
   await page.locator('.ex-card').first().waitFor();
   check('Session cards have thumbnails', (await page.locator('.ex-card .ex-thumb').count()) > 0);
   for (let i = 0; i < 3; i++) await page.locator('.ex-card').first().locator('.set-check').nth(i).click();
@@ -63,10 +74,10 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
   await btn(page, 'Save workout').click();
   await btn(page, 'Done').click();
-  await page.locator('.done-row').waitFor();
-  check('After the gym: a done row and the swim card', (await page.locator('.done-row').count()) === 1 && (await page.locator('.hero.swim').count()) === 1);
+  await page.locator('.done-card').waitFor();
+  check('After the gym: a done card and the swim card', (await page.locator('.done-card').count()) === 1 && (await page.locator('.wcard.swim').count()) === 1);
 
-  await page.locator('.hero.swim').getByRole('button', { name: 'Start swim' }).click();
+  await page.locator('.wcard.swim').getByRole('button', { name: 'Start swim' }).click();
   await page.locator('.drill-link').first().click();
   check('Swim how-to sheet has a video', (await page.locator('.sheet .video-poster').count()) === 1);
   await page.getByRole('button', { name: 'Close' }).last().click();
@@ -77,7 +88,7 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   await page.getByText('Done today').waitFor();
   check('Both done shows "Done today"', (await page.getByText('Done today').count()) === 1);
 
-  await tabTo(page, 'More');
+  await openSettings(page);
   await page.locator('.list-item', { hasText: 'Backup & data' }).click();
   await btn(page, 'Delete all data').click();
   await btn(page, 'Delete everything').click();
@@ -90,35 +101,54 @@ test('plan, library, settings', async ({ newPage, open, check, shot }) => {
   await tabTo(page, 'Plan');
   await page.locator('.list-item', { hasText: 'Gym program' }).click();
   await page.locator('.sheet .choice', { hasText: 'Upper / lower' }).click();
-  check('Plan lists Upper Body and Lower Body', (await page.locator('.list-item', { hasText: 'Upper Body' }).count()) === 1 && (await page.locator('.list-item', { hasText: 'Lower Body' }).count()) === 1);
-  await page.locator('.list-item', { hasText: 'Friday' }).click();
+  check('Plan lists Upper Body and Lower Body', (await page.locator('.rot-card', { hasText: 'Upper Body' }).count()) === 1 && (await page.locator('.rot-card', { hasText: 'Lower Body' }).count()) === 1);
+  await page.locator('.day-chip[aria-label^="Friday"]').click();
   await page.locator('.sheet .list-item', { hasText: 'Gym + Swim' }).click();
-  check('Friday becomes Gym + Swim', (await page.locator('.list-item', { hasText: 'Friday' }).locator('.chip.both').count()) === 1);
-  await page.locator('.list-item', { hasText: 'Upper Body' }).click();
-  await page.locator('.list-item').first().click();
-  check('A plan exercise opens its details', (await page.locator('.find-card').count()) === 1);
+  await page.locator('.day-chip.both[aria-label^="Friday"]').waitFor();
+  check('Friday becomes Gym + Swim', true);
+  check('One workout is marked up next per kind', (await page.locator('.rot-card .chip', { hasText: 'Up next' }).count()) === 2);
+  await page.locator('.rot-card', { hasText: 'Upper Body' }).click();
+  await page.locator('.wk-hero').waitFor();
+  check('Workout page shows the warm-up and cool-down rows', (await page.locator('.list-item', { hasText: 'Warm-up' }).count()) === 1 && (await page.locator('.list-item', { hasText: 'Cool-down' }).count()) === 1);
+  await exerciseRow(page).click();
+  await page.locator('.sheet .find-card').waitFor();
+  check('A plan exercise opens its details in a sheet', (await page.locator('.sheet .find-card').count()) === 1);
   await shot(page, 'plan-exercise');
-  await btn(page, 'Back').click();
+  await closeSheet(page);
   await btn(page, 'Back').click();
 
-  await tabTo(page, 'More');
-  await page.locator('.list-item', { hasText: 'Exercise library' }).click();
-  await page.fill('#lib-search', 'gravitron');
-  check('Search by other name finds Assisted Pull-Up', (await page.locator('.list-item', { hasText: 'Assisted Pull-Up' }).count()) === 1);
-  await btn(page, 'Back').click();
+  await tabTo(page, 'Learn');
+  await page.fill('#learn-search', 'gravitron');
+  check('Search by other name finds Assisted Pull-Up', (await page.locator('.tile', { hasText: 'Assisted Pull-Up' }).count()) === 1);
+  await page.locator('.tile', { hasText: 'Assisted Pull-Up' }).click();
+  await page.locator('.sheet .find-card').waitFor();
+  check('Learn opens exercises in a sheet', true);
+  await closeSheet(page);
+  await page.fill('#learn-search', '');
+  await shot(page, 'learn');
+
+  await openSettings(page);
   check('Habits hidden by default', (await page.locator('.list-item', { hasText: 'Habits' }).count()) === 0);
-  await page.locator('.list-item', { hasText: 'Settings' }).click();
-  await page.locator('.seg button', { hasText: 'Simple' }).click();
   await page.locator('#st-trackBody').check();
+  await page.locator('.list-item', { hasText: 'Habits' }).waitFor();
+  check('Habits and Body log appear once tracking is on', (await page.locator('.list-item', { hasText: 'Body log' }).count()) === 1);
+  await shot(page, 'settings');
   await btn(page, 'Back').click();
-  await tabTo(page, 'Today');
+  await page.getByText('Daily check-in').waitFor();
   check('Check-in shows once body tracking is on', (await page.getByText('Daily check-in').count()) === 1);
   await tabTo(page, 'Plan');
-  await page.locator('.list-item', { hasText: /Easy Swim|Endurance/ }).first().click();
-  check('Simple swim mode has no drills', (await page.locator('.swim-item', { hasText: /drill/i }).count()) === 0);
+  await page.locator('.list-item', { hasText: 'Swim workouts' }).click();
+  await page.locator('.sheet .choice', { hasText: 'Simple' }).click();
+  await page.locator('.rot-card', { hasText: /Easy Swim|Endurance/ }).first().click();
+  await page.locator('.wk-hero.swim').waitFor();
+  check('Simple swim mode has no drills', (await page.locator('.list-item', { hasText: /drill/i }).count()) === 0);
+  await page.locator('.list-item', { hasText: 'Free' }).first().click();
+  await page.locator('.sheet .target-card').waitFor();
+  check('Swim rows open the stroke sheet with the set target', (await page.locator('.sheet .video-poster').count()) === 1);
+  await closeSheet(page);
   await btn(page, 'Back').click();
 
-  for (const t of ['Today', 'Plan', 'Log', 'Progress', 'More']) {
+  for (const t of ['Today', 'Plan', 'Progress', 'Learn']) {
     await tabTo(page, t);
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     check(`No sideways scrolling on ${t}`, over <= 0, `${over}px`);
@@ -128,20 +158,22 @@ test('plan, library, settings', async ({ newPage, open, check, shot }) => {
 test('resume after reload; 50 m pool swim', async ({ newPage, open, check }) => {
   const page = await newPage();
   await open(page, { profile: PROFILE, schedule: WEEK });
-  await page.locator('.hero.gym').getByRole('button', { name: 'Start workout' }).click();
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
   await page.locator('.ex-card').first().locator('.set-input').nth(0).fill('77.5');
   await page.locator('.ex-card').first().locator('.set-input').nth(1).fill('11');
   await page.waitForTimeout(400); // typed values save after a short pause
   await page.reload();
-  await page.locator('.resume-bar').waitFor();
-  check('Resume bar after reload', (await page.locator('.resume-bar').count()) === 1);
-  await page.locator('.resume-bar').click();
+  await page.locator('.resume-pill').waitFor();
+  check('Resume pill after reload', (await page.locator('.resume-pill').count()) === 1);
+  await tabTo(page, 'Learn');
+  check('Resume pill floats on other tabs too', (await page.locator('.resume-pill').count()) === 1);
+  await page.locator('.resume-pill').click();
   const v = await page.locator('.ex-card').first().locator('.set-input').nth(0).inputValue();
   check('Typed weight survives reload', v === '77.5', v);
   await page.locator('.session-head').getByRole('button', { name: 'Minimize workout' }).click();
 
   await open(page, { profile: { ...PROFILE, pool: { len: 50, unit: 'm' } }, schedule: WEEK });
-  await page.locator('.hero.swim').getByRole('button', { name: 'Start swim' }).click();
+  await page.locator('.wcard.swim').getByRole('button', { name: 'Start swim' }).click();
   const meta = await page.locator('.swim-item .si-meta').first().textContent();
   check('50 m pool: 1-length reps with longer rest', /length/.test(meta) && /rest 80 s/.test(meta), meta);
   check('50 m pool: lane-rope note for beginners', (await page.getByText('Hold the lane rope at halfway', { exact: false }).count()) > 0);
@@ -154,22 +186,21 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
     'sessions-2026-09': { items: [gymSession('a1', '2026-09-28', 'p1-a', [['leg-press', [[100, 12], [100, 12], [100, 11]]], ['lateral-raise', [[10, 20], [10, 20]]]])] },
     'sessions-2026-10': { items: [gymSession('a2', '2026-10-05', 'p1-a', [['leg-press', [[100, 15], [100, 15], [100, 15]]], ['lateral-raise', [[10, 20], [10, 20]]]])] },
   });
-  await tabTo(page, 'More');
-  await page.locator('.list-item', { hasText: 'Settings' }).click();
+  await openSettings(page);
   await page.locator('.seg button', { hasText: 'kg' }).click();
   await tabTo(page, 'Progress');
   const e1 = await page.locator('.kv .v').first().textContent();
   check('Progress converts to kg', /kg/.test(e1), e1);
   await tabTo(page, 'Plan');
-  await page.locator('.list-item', { hasText: 'Full Body A' }).click();
-  await btn(page, 'Start this workout').click();
+  await page.locator('.rot-card', { hasText: 'Full Body A' }).click();
+  await btn(page, 'Start workout').click();
   const lp = await page.locator('.ex-card').first().locator('.set-input').nth(0).inputValue();
   check('Leg press suggestion converts to kg (about 50)', Math.abs(Number(lp) - 50.5) <= 0.6, lp);
   const lr = await page.locator('.ex-card').filter({ hasText: 'Lateral Raise' }).locator('.set-input').nth(0).inputValue();
   check('Lateral raise uses a real dumbbell size in kg', ['4.5', '5', '6'].includes(lr), lr);
   await page.locator('.session-head').getByRole('button', { name: 'Minimize workout' }).click();
 
-  await tabTo(page, 'More');
+  await openSettings(page);
   await page.locator('.list-item', { hasText: 'Backup & data' }).click();
   const dlP = page.waitForEvent('download');
   await btn(page, 'Export backup').click();
@@ -178,7 +209,7 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   const before = Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync(file, 'utf8')).docs).map(([k, v]) => [PREFIX + k, JSON.stringify(v)]));
   const page2 = await newPage();
   await open(page2, { profile: { onboarded: true, units: 'lb', startDate: '2026-10-01' } });
-  await tabTo(page2, 'More');
+  await openSettings(page2);
   await page2.locator('.list-item', { hasText: 'Backup & data' }).click();
   await page2.setInputFiles('#restore-file', file);
   await page2.locator('.dialog').getByRole('button', { name: 'Restore', exact: true }).click();
@@ -194,10 +225,10 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   await open(page3, { profile: { ...PROFILE, startDate: '2026-06-01' }, schedule: { days: ['gym', 'gym', 'both', 'gym', 'gym', 'rest', 'rest'] } });
   check('"Plan complete" after week 12', (await page3.getByText('Plan complete', { exact: false }).count()) > 0);
   await page3.locator('.wday').nth(3).click();
-  const thu = await page3.locator('.hero h2').first().textContent();
-  await btn(page3, 'Back').click();
+  const thu = await page3.locator('.wcard .wc-title').first().textContent();
   await page3.locator('.wday').nth(4).click();
-  const fri = await page3.locator('.hero h2').first().textContent();
+  await page3.locator('.wday').nth(4).and(page3.locator('[aria-pressed="true"]')).waitFor();
+  const fri = await page3.locator('.wcard .wc-title').first().textContent();
   check('Future gym days alternate A and B', thu !== fri, `${thu} / ${fri}`);
 });
 
@@ -206,22 +237,28 @@ test('navigation: back, swipe-back, forward, tab stacks, scroll', async ({ newPa
   await open(page, { profile: PROFILE, schedule: WEEK });
   const ll = () => page.evaluate(() => history.state?.ll);
   await tabTo(page, 'Plan');
-  const item = page.locator('.list-item', { hasText: 'Full Body A' });
-  await item.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const y0 = await page.evaluate(() => window.scrollY);
-  await item.click();
-  await btn(page, 'Start this workout').waitFor();
-  await page.locator('.list-item').first().click();
-  await page.locator('.find-card').waitFor();
-  check('Two pages deep = two history entries', (await ll()) === 2, String(await ll()));
-  await page.goBack(); // what the iPhone edge swipe does
-  await btn(page, 'Start this workout').waitFor();
-  check('Swipe-back returns to the workout page', (await ll()) === 1);
+  await page.locator('.rot-card', { hasText: 'Full Body A' }).evaluate((el) => el.click()); // tap without scrolling first
+  await btn(page, 'Start workout').waitFor();
+  await exerciseRow(page).click();
+  await page.locator('.sheet .find-card').waitFor();
+  check('A sheet is not a history entry', (await ll()) === 1, String(await ll()));
+  await closeSheet(page);
+
   await page.locator('.tabbar').getByRole('button', { name: 'Today' }).click();
   await page.locator('.greet').waitFor();
   check('Switching tab unwinds history', (await ll()) === 0, String(await ll()));
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('.list-item', { hasText: 'Backup & data' }).click();
+  await page.getByRole('button', { name: 'Export backup' }).waitFor();
+  check('Two pages deep = two history entries', (await ll()) === 2, String(await ll()));
+  await page.goBack(); // what the iPhone edge swipe does
+  await page.locator('.topbar .title', { hasText: 'Settings' }).waitFor();
+  check('Swipe-back returns one page', (await ll()) === 1);
+
   await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
-  await btn(page, 'Start this workout').waitFor();
+  await btn(page, 'Start workout').waitFor();
   check('Plan remembers its open page', (await ll()) === 1, String(await ll()));
   await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
   await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
@@ -229,11 +266,14 @@ test('navigation: back, swipe-back, forward, tab stacks, scroll', async ({ newPa
   const y1 = await page.evaluate(() => window.scrollY);
   check('Scroll position comes back', y0 > 0 && Math.abs(y1 - y0) < 2, `${y0} → ${y1}`);
   await page.goForward();
-  await btn(page, 'Start this workout').waitFor();
+  await btn(page, 'Start workout').waitFor();
   check('Forward restores the page', (await ll()) === 1);
   await btn(page, 'Back').click();
   await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
   check('Back button pops through history', (await ll()) === 0);
+  await page.locator('.tabbar').getByRole('button', { name: 'Today' }).click();
+  await page.locator('.topbar .title', { hasText: 'Settings' }).waitFor();
+  check('Today remembers Settings was open', (await ll()) === 1);
 });
 
 test('screen changes animate unless motion is reduced', async ({ newPage, open, check }) => {
@@ -245,8 +285,8 @@ test('screen changes animate unless motion is reduced', async ({ newPage, open, 
   const flow = async (page) => {
     await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
     await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
-    await page.locator('.list-item', { hasText: 'Full Body A' }).click();
-    await btn(page, 'Start this workout').waitFor();
+    await page.locator('.rot-card', { hasText: 'Full Body A' }).click();
+    await btn(page, 'Start workout').waitFor();
     await page.waitForFunction(() => !document.documentElement.dataset.vt);
     return page.evaluate(() => window.__vt);
   };
@@ -317,6 +357,86 @@ test('sheets: drag to dismiss, snap back, escape, glass settings', async ({ newP
   await page.getByRole('button', { name: 'Start a different workout' }).click();
   const bf = await page.locator('.sheet').evaluate((el) => getComputedStyle(el).backdropFilter);
   check('Reduce transparency turns the glass solid', bf === 'none', bf);
+});
+
+test('today: pick a day in place, look ahead and back, rings', async ({ newPage, open, check, shot }) => {
+  const page = await newPage();
+  await open(page, {
+    profile: PROFILE, schedule: WEEK,
+    'sessions-2026-10': { items: [gymSession('a2', '2026-10-05', 'p1-a', [['leg-press', [[100, 15], [100, 15], [100, 15]]]])] },
+  });
+  await shot(page, 'today', false);
+  const ll = () => page.evaluate(() => history.state?.ll);
+  check('Rings card shows this week', (await page.locator('.week-rings').count()) === 1 && /1\/3/.test(await page.locator('.week-rings').textContent()));
+  check('Monday shows as done in the strip', (await page.locator('.wday').nth(0).locator('.wd-mark.done').count()) === 1);
+  check('Tuesday (planned, nothing logged) shows as missed', (await page.locator('.wday').nth(1).locator('.wd-mark.missed').count()) === 1);
+  await page.locator('.wday').nth(4).click(); // Friday, gym
+  await page.getByRole('button', { name: 'Back to today' }).waitFor();
+  check('Picking a day stays on Today (no new page)', (await ll()) === 0);
+  check('A future day offers Details but not Start', (await page.locator('.wcard').getByRole('button', { name: 'Start workout' }).count()) === 0 && (await page.locator('.wcard').getByRole('button', { name: 'Details' }).count()) === 1);
+  await page.locator('.wday').nth(1).click(); // Tuesday, missed swim
+  check('A missed day says what was planned', (await page.locator('.missed-card', { hasText: 'was planned' }).count()) === 1);
+  await page.locator('.wday').nth(0).click(); // Monday, done
+  check('A past day shows what was done', (await page.locator('.done-card', { hasText: 'Full Body A' }).count()) === 1);
+  await page.getByRole('button', { name: 'Next week' }).click();
+  check('Next week moves the strip', (await page.locator('.week-label').textContent()) === 'Next week');
+  await page.getByRole('button', { name: 'Back to today' }).click();
+  await page.locator('.week-label', { hasText: 'This week' }).waitFor();
+  check('"Back to today" returns', (await page.locator('.wday.is-today[aria-pressed="true"]').count()) === 1);
+  await page.locator('.week-rings').click();
+  await page.locator('.tabbar [aria-current="page"]', { hasText: 'Progress' }).waitFor();
+  check('Rings open Progress', true);
+});
+
+test('today: card morphs into the workout page and back', async ({ newPage, open, check }) => {
+  const page = await newPage({ motion: true });
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Details' }).click();
+  await page.locator('.wk-hero').waitFor();
+  check('The page hero carries the shared name', (await page.locator('.wk-hero').evaluate((el) => el.style.viewTransitionName)) === 'wk-hero');
+  await page.waitForFunction(() => !document.documentElement.dataset.vt);
+  await btn(page, 'Back').click();
+  await page.locator('.wcard.gym').waitFor();
+  await page.waitForFunction(() => !document.documentElement.dataset.vt);
+  await page.waitForTimeout(800);
+  check('The name is cleared after coming back', (await page.locator('.wcard.gym').evaluate((el) => el.style.viewTransitionName)) === '');
+});
+
+test('every page renders without errors', async ({ newPage, open, check }) => {
+  const page = await newPage();
+  await open(page, {
+    profile: PROFILE, schedule: WEEK, settings: { trackBody: true },
+    'sessions-2026-10': { items: [gymSession('a2', '2026-10-05', 'p1-a', [['leg-press', [[100, 15], [100, 15], [100, 15]]]])] },
+  });
+  const visit = async (label, open, ready) => {
+    await open();
+    await ready.waitFor();
+    const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(`${label} renders without sideways scrolling`, over <= 0, `${over}px`);
+  };
+  await tabTo(page, 'Progress');
+  await visit('History', () => page.locator('.list-item', { hasText: 'History' }).click(), page.locator('.month'));
+  await visit('Session details', () => page.locator('.session-row').first().click(), page.locator('.page-head h1', { hasText: 'Full Body A' }));
+  await btn(page, 'Back').click();
+  await page.locator('.m-day').nth(8).click(); // a day in the calendar jumps to Today
+  await page.locator('.tabbar [aria-current="page"]', { hasText: 'Today' }).waitFor();
+  check('Tapping a calendar day opens it on Today', (await page.locator('.wday[aria-pressed="true"]').count()) === 1);
+  await tabTo(page, 'Learn');
+  await visit('A guide', () => page.locator('.list-item', { hasText: 'Start here' }).click(), page.locator('.prose'));
+  await btn(page, 'Back').click();
+  for (const tool of ['Plate calculator', '1-rep max', 'Swim pace', 'Calories & protein']) {
+    await visit(`Tool: ${tool}`, () => page.locator('.list-item', { hasText: tool }).click(), page.locator('.seg'));
+    await btn(page, 'Back').click();
+  }
+  await openSettings(page);
+  for (const [row, ready] of [['Backup & data', 'Export backup'], ['Install on iPhone', 'Put it on your Home Screen'], ['Habits', 'Avg sleep (7 days)'], ['Body log', 'Tap an entry to delete it.']]) {
+    await visit(row, () => page.locator('.list-item', { hasText: row }).click(), page.getByText(ready).first());
+    await btn(page, 'Back').click();
+  }
+  await tabTo(page, 'Plan');
+  await visit('Workout builder', () => page.locator('.rot-card.create').click(), page.locator('#b-name'));
+  await btn(page, 'Back').click();
+  await visit('About the program sheet', () => page.locator('.program-card').click(), page.locator('.sheet', { hasText: 'Foundation' }));
 });
 
 await run();

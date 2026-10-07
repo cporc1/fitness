@@ -179,7 +179,7 @@ function stepDone() {
     h('div', { class: 'card' },
       h('div', { class: 'eyebrow' }, 'Before your first session'),
       h('ul', { class: 'checklist' },
-        h('li', null, 'Read "Start here" and "Your first week in the gym" in More → Learn (3 minutes each).'),
+        h('li', null, 'Read "Start here" and "Your first week in the gym" in the Learn tab (3 minutes each).'),
         h('li', null, 'Start lighter than you think. The app learns your weights as you log them.'),
         h('li', null, 'On iPhone in Safari, tap Share → Add to Home Screen now, and log from the installed app. It keeps its own data, separate from Safari.'))),
     h('p', { class: 'small muted' }, 'If you have any health conditions, check with your doctor before starting a new exercise program.'),

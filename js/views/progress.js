@@ -171,6 +171,10 @@ function milestones(state) {
 
 registerRoute('progress', (_p, state) => h('div', { class: 'view' },
   pageHead('Progress', 'Your training, charted'),
+  h('div', { class: 'card flush' }, h('div', { class: 'list' }, listItem({
+    title: 'History', sub: `${state.sessions.length} ${state.sessions.length === 1 ? 'workout' : 'workouts'} logged · calendar and details`,
+    leading: icon(ICONS.calendar), onclick: () => go('history'),
+  }))),
   segmented([{ value: 8, label: '8 weeks' }, { value: 12, label: '12 weeks' }, { value: 26, label: '6 months' }], view.range, (v) => { view.range = v; render(); }, 'Time range'),
   consistency(state),
   strength(state),

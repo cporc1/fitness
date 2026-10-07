@@ -25,6 +25,9 @@ let fallback = null; // in case a history traversal never reports back
 let ignoreNext = false; // our own corrective traversal
 let renderView = () => {};
 
+/** Which workout card is morphing into (or back out of) the Workout page hero. */
+export const sharedHero = { id: null };
+
 const stack = (id = nav.tab) => (nav.stacks[id] ||= []);
 const routeKey = (r) => `${r.name}:${JSON.stringify(r.params || {})}`;
 const isTransient = (r) => TRANSIENT.has(r.name) || !!r.params?.celebrate;

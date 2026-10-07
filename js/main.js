@@ -3,9 +3,12 @@
 import './views/onboarding.js';
 import './views/today.js';
 import './views/plan.js';
+import './views/workout.js';
 import './views/history.js';
 import './views/progress.js';
-import './views/more.js';
+import './views/learn.js';
+import './views/tools.js';
+import './views/settings.js';
 import './views/library.js';
 import './views/session-gym.js';
 import './views/session-swim.js';

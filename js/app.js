@@ -85,12 +85,39 @@ export function render(opts = {}) {
 
     const showResume = !fullScreen && !!state.active && state.profile?.onboarded;
     appEl.classList.toggle('has-resume', showResume);
-    appEl.replaceChildren(viewEl, ...(fullScreen ? [] : [showResume ? resumePill(state.active) : '', tabBar(activeTab())]));
+    // Tab roots get a small title bar that fades in once the big title scrolls away.
+    const miniTitle = !fullScreen && !viewEl.querySelector('.topbar')
+      ? (viewEl.dataset.title || viewEl.querySelector('.page-head h1')?.textContent || '') : '';
+    titleFromHeading(viewEl);
+    document.documentElement.dataset.day = viewEl.dataset.day || 'none';
+    appEl.replaceChildren(viewEl);
+    // The tab bar and pills live outside #app, so #app can shrink behind a sheet.
+    document.getElementById('chrome').replaceChildren(...(fullScreen ? [] : [
+      miniTitle ? h('div', { class: 'mini-title glass', 'aria-hidden': 'true' }, miniTitle) : '',
+      showResume ? resumePill(state.active) : '',
+      tabBar(activeTab()),
+    ]));
     if (opts.scrollTop) window.scrollTo(0, 0);
     else if (opts.restoreScroll) window.scrollTo(0, scrollFor(route));
+    onScroll();
   } finally {
     rendering = false;
   }
+}
+
+/** Pages with a back bar show their big heading in the bar once it scrolls away. */
+function titleFromHeading(viewEl) {
+  const title = viewEl.querySelector('.topbar .title');
+  if (!title) return;
+  if (title.textContent) { title.classList.add('always'); return; }
+  title.textContent = viewEl.querySelector('.page-head h1, .wk-hero h1')?.textContent || '';
+}
+
+function onScroll() {
+  const y = window.scrollY;
+  const root = document.documentElement;
+  root.classList.toggle('scrolled', y > 4);
+  root.classList.toggle('title-collapsed', y > 64);
 }
 
 // Only touch data-theme when the user picked one in Settings, so a host
@@ -116,10 +143,7 @@ export function start() {
   // Ask the browser not to clear this app's storage under pressure.
   try { navigator.storage?.persist?.().catch(() => {}); } catch { /* unsupported */ }
   document.addEventListener('pointerdown', unlockAudio, { passive: true });
-  window.addEventListener('scroll', () => {
-    const bar = document.querySelector('.topbar');
-    if (bar) bar.classList.toggle('scrolled', window.scrollY > 4);
-  }, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true });
   render();
   store.connectCloud().catch(() => {});
 }

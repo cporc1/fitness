@@ -164,7 +164,10 @@ p { margin: 0; }
   border-bottom: 1px solid transparent;
   min-height: 52px;
 }
-.topbar.scrolled { border-bottom-color: var(--line); }
+html.scrolled .topbar { border-bottom-color: var(--line); }
+/* iOS-style: a page's big heading moves into the bar once it scrolls away. */
+.topbar .title { opacity: 0; transition: opacity .2s ease; }
+.topbar .title.always, html.title-collapsed .topbar .title { opacity: 1; }
 .topbar .title { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .icon-btn {
   display: inline-grid; place-items: center; width: 44px; height: 44px; flex: none;
@@ -210,6 +213,58 @@ p { margin: 0; }
 .resume-pill .rp-time { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); opacity: .8; font-variant-numeric: tabular-nums; }
 .resume-pill .rp-go { padding: 8px 14px; border-radius: 999px; background: var(--good); color: var(--on-accent); font-weight: 700; font-size: var(--fs-sm); }
 @keyframes rise-in { from { transform: translateY(16px); opacity: 0; } }
+
+/* ---------- chrome layer, ambient light, card stack ---------- */
+#chrome { position: fixed; inset: 0; z-index: 30; pointer-events: none; transform-origin: 50% 50%; transition: transform var(--dur-page) var(--ease-page), opacity var(--dur-page) ease; }
+#chrome > * { pointer-events: auto; }
+.mini-title {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 25; pointer-events: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px; text-align: center;
+  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg);
+  border-width: 0 0 1px; border-radius: 0; box-shadow: none; background: color-mix(in srgb, var(--bg) 84%, transparent);
+  opacity: 0; visibility: hidden; transform: translateY(-8px);
+  transition: opacity .2s ease, transform .25s var(--ease-snappy), visibility 0s linear .25s;
+}
+html.title-collapsed .mini-title { opacity: 1; visibility: visible; transform: none; transition: opacity .2s ease, transform .25s var(--ease-snappy), visibility 0s; }
+
+/* Soft coloured light drifting behind everything, tinted by Today's day. */
+@property --amb-gym { syntax: '<color>'; inherits: true; initial-value: transparent; }
+@property --amb-swim { syntax: '<color>'; inherits: true; initial-value: transparent; }
+:root {
+  --amb-gym: color-mix(in srgb, var(--iron) 12%, transparent);
+  --amb-swim: color-mix(in srgb, var(--pool) 12%, transparent);
+  --amb-teal: color-mix(in srgb, #1aa58a 9%, transparent);
+  transition: --amb-gym .8s ease, --amb-swim .8s ease;
+}
+html[data-day="gym"] { --amb-gym: color-mix(in srgb, var(--iron) 24%, transparent); }
+html[data-day="swim"] { --amb-swim: color-mix(in srgb, var(--pool) 24%, transparent); }
+html[data-day="both"] { --amb-gym: color-mix(in srgb, var(--iron) 20%, transparent); --amb-swim: color-mix(in srgb, var(--pool) 20%, transparent); }
+body::before {
+  content: ''; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38% 32% at 18% 16%, var(--amb-gym), transparent 72%),
+    radial-gradient(42% 36% at 88% 24%, var(--amb-swim), transparent 72%),
+    radial-gradient(50% 40% at 44% 92%, var(--amb-teal), transparent 72%);
+  animation: ambient-drift 40s ease-in-out infinite alternate;
+  transition: opacity .3s ease;
+}
+@keyframes ambient-drift { to { transform: translate3d(5%, -4%, 0) rotate(6deg) scale(1.06); } }
+
+/* Behind an open sheet the page shrinks back like an iOS card stack. */
+#app { transition: transform var(--dur-page) var(--ease-page), filter var(--dur-page) ease; }
+html.sheet-open, html.sheet-closing { background: #000; }
+html.sheet-open body, html.sheet-closing body { background: transparent; }
+html.sheet-open body::before, html.sheet-closing body::before { opacity: 0; }
+html.sheet-open #app, html.sheet-closing #app {
+  transform-origin: 50% calc(var(--vy, 0px) + 50vh);
+  clip-path: inset(var(--vy, 0px) 0 calc(100% - var(--vy, 0px) - 100vh) 0 round 16px);
+}
+html.sheet-open #app { transform: translateY(8px) scale(.93); filter: brightness(.82); }
+html.sheet-open #chrome { transform: translateY(8px) scale(.93); opacity: .7; }
+html.reduce-motion.sheet-open #app, html.reduce-motion.sheet-open #chrome { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html.sheet-open #app, html.sheet-open #chrome { transform: none; }
+}
 
 /* ---------- glass ---------- */
 .glass {
@@ -510,6 +565,27 @@ html[data-vt="day-prev"]::view-transition-new(day-content) { animation: day-in-l
 .rot-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: auto; }
 .rot-name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); line-height: 1.1; }
 .rot-sub { font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+
+/* ---------- signature surfaces: water caustics on swims, a light sweep on gym ---------- */
+.wcard.swim, .wk-hero.swim, .focus-card, .wcard.gym, .wk-hero.gym { isolation: isolate; overflow: hidden; }
+.focus-card { position: relative; }
+.wcard.swim::before, .wk-hero.swim::before, .focus-card::before,
+.wcard.swim::after, .wk-hero.swim::after, .focus-card::after {
+  content: ''; position: absolute; z-index: -1; pointer-events: none;
+  top: -360px; left: -360px; width: calc(100% + 720px); height: calc(100% + 720px);
+  background: url(../media/caustics.webp) 0 0 / 256px 256px repeat; opacity: .32;
+  animation: caustics-a 28s linear infinite;
+}
+.wcard.swim::after, .wk-hero.swim::after, .focus-card::after { background-size: 360px 360px; opacity: .22; animation: caustics-b 38s linear infinite; }
+@keyframes caustics-a { to { transform: translate3d(256px, 256px, 0); } }
+@keyframes caustics-b { to { transform: translate3d(360px, -360px, 0); } }
+.wcard.gym::before, .wk-hero.gym::before {
+  content: ''; position: absolute; z-index: -1; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .5) 48%, transparent 66%);
+  transform: translateX(-130%);
+  animation: sheen 7s cubic-bezier(.4, 0, .2, 1) 1.2s infinite;
+}
+@keyframes sheen { 0% { transform: translateX(-130%); } 32%, 100% { transform: translateX(130%); } }
 
 /* ---------- session (gym) ---------- */
 .session-head {
@@ -954,3 +1030,12 @@ html.reduce-motion .demo .demo-tag { display: none; }
 .both-icons svg:first-child { color: var(--iron); }
 .both-icons svg:last-child { color: var(--pool); }
 .chip.both { background: linear-gradient(90deg, var(--iron-wash) 50%, var(--pool-wash) 50%); color: var(--ink); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wcard.swim::before, :root:not([data-theme="light"]) .wk-hero.swim::before, :root:not([data-theme="light"]) .focus-card::before { opacity: .1; }
+  :root:not([data-theme="light"]) .wcard.swim::after, :root:not([data-theme="light"]) .wk-hero.swim::after, :root:not([data-theme="light"]) .focus-card::after { opacity: .07; }
+  :root:not([data-theme="light"]) .wcard.gym::before, :root:not([data-theme="light"]) .wk-hero.gym::before { background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .07) 48%, transparent 66%); }
+}
+:root[data-theme="dark"] .wcard.swim::before, :root[data-theme="dark"] .wk-hero.swim::before, :root[data-theme="dark"] .focus-card::before { opacity: .1; }
+:root[data-theme="dark"] .wcard.swim::after, :root[data-theme="dark"] .wk-hero.swim::after, :root[data-theme="dark"] .focus-card::after { opacity: .07; }
+:root[data-theme="dark"] .wcard.gym::before, :root[data-theme="dark"] .wk-hero.gym::before { background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, .07) 48%, transparent 66%); }

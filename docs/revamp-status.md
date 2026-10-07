@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** Phases 0–2 (router, glass sheets, four tabs, new Today, Workout page, Plan, Learn, new Progress).
-- **Next up:** Phase 3 pull request, then checkpoint 4.1.
+- **Live on `main`:** Phases 0–3 (everything except the Phase 4 polish).
+- **Next up:** checkpoint 4.2.
 
 ## Checkpoints
 
@@ -81,10 +81,10 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - [x] **3.3 Swim screen and celebration.**
   - The swim focus card dominates; the set list collapses; the dry warm-up shows once.
   - A celebration screen after Finish shows rings, confetti and records.
-- [ ] **Phase 3 PR merged.**
+- [x] **Phase 3 PR merged.** [cporc1/fitness#6](https://github.com/cporc1/fitness/pull/6)
 
 ### Phase 4: Polish
-- [ ] **4.1 Visuals.**
+- [x] **4.1 Visuals.**
   - Ambient background, swim caustics and the gym sheen.
   - Collapsing large titles and the black-translucent status bar.
   - Card-stack scaling behind sheets.
@@ -108,3 +108,10 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: 2.2 done. `js/views/progress.js` rewritten: mode switch (pill slides via `html[data-vt=seg]`), range chips, 4 KPIs with count-up and comparison, stacked/single columns, Strength + muscle groups (Workout), pace + strokes (Swim), records, recent, Body and milestones (Total). Charts take `animate` (only on arrival or a switch). History opens from "See all history". 11 e2e flows.
 - 2026-10-07: Phase 2 merged (#5). 3.1 + 3.2 done. `stepWeight()` in `program.js` (unit-tested). The rest timer is a floating glass pill. Focus mode lives in `session-gym.js`: `session.view` ('list' default, or 'focus' from Settings → Workout) and `session.focusIndex` persist with the active session and are stripped on save. A scroll-snap pager has warm-up and cool-down pages; steppers only appear in Focus.
 - 2026-10-07: 3.3 done. Finish now saves right away and `replace`s to the `celebration` route (`js/views/celebration.js`): rings, confetti (`motion.confetti`), stats, medals, effort, and notes/time/distance. A gym session with no sets ticked asks first. The swim screen has a one-time "Before you get in" card with an Apple Watch hint, a ripple on Rep done (`motion.ripple`), "Next up", and all sets in a disclosure. `ring()` moved to `ui.js`. SW v5. 13 e2e flows.
+- 2026-10-07: Phase 3 merged (#6). 4.1 done:
+  - Tab bar, pills and mini titles render into `#chrome` (outside `#app`), so `html.sheet-open` can scale `#app` and `#chrome` like an iOS card stack.
+  - Ambient light is `body::before`, tinted by `html[data-day]` from Today.
+  - Caustics come from `media/caustics.webp` (generated, seamless, 25 KB) on swim cards, the swim hero and the live swim card. Gym cards get a sheen.
+  - Collapsing titles: tab roots get `.mini-title`; pushed pages fill `.topbar .title` from their heading (`html.title-collapsed`).
+  - Kept the default status bar: `black-translucent` forces white status text, which is unreadable on the light theme. Revisit on a real device.
+  - SW v6.

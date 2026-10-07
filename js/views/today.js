@@ -338,7 +338,8 @@ registerRoute('today', (_params, state, { entering }) => {
   const date = todayView.date || today;
   const week = programWeek(state.profile, today);
   const programDone = week > PROGRAM_WEEKS;
-  const view = h('div', { class: 'view' });
+  const selectedKind = kindOfSlot(state, slotForDate(state.schedule, date));
+  const view = h('div', { class: 'view', dataset: { title: 'Today', day: selectedKind } });
   put(view,
     h('header', { class: 'greet' },
       h('div', { class: 'row between' },

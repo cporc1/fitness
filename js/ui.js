@@ -7,9 +7,24 @@ import { reducedMotion, easing } from './motion.js';
 const root = () => document.getElementById('overlay-root');
 
 let openSheets = 0;
+let stackTimer = null;
 function lockScroll(on) {
   openSheets += on ? 1 : -1;
   document.body.style.overflow = openSheets > 0 ? 'hidden' : '';
+}
+
+/** The page behind sheets shrinks back (CSS: html.sheet-open), and grows again on close. */
+function cardStack(open) {
+  const root = document.documentElement;
+  clearTimeout(stackTimer);
+  if (open) {
+    root.style.setProperty('--vy', `${window.scrollY}px`);
+    root.classList.remove('sheet-closing');
+    root.classList.add('sheet-open');
+  } else if (root.classList.contains('sheet-open')) {
+    root.classList.replace('sheet-open', 'sheet-closing');
+    stackTimer = setTimeout(() => root.classList.remove('sheet-closing'), 460);
+  }
 }
 
 const sheetStack = []; // Escape closes only the top sheet
@@ -45,6 +60,7 @@ export function sheet(title, content, { onClose } = {}) {
     closed = true;
     sheetStack.splice(sheetStack.indexOf(me), 1);
     document.removeEventListener('keydown', onKey);
+    if (!sheetStack.length) cardStack(false);
     const finish = () => {
       scrim.remove();
       lockScroll(false);
@@ -115,6 +131,7 @@ export function sheet(title, content, { onClose } = {}) {
 
   put(body, typeof content === 'function' ? content(close) : content);
   root().append(scrim);
+  if (!sheetStack.length) cardStack(true);
   sheetStack.push(me);
   lockScroll(true);
   document.addEventListener('keydown', onKey);

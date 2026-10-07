@@ -2,7 +2,7 @@
 
 import * as store from './store.js';
 import { h, icon, ICONS, todayISO, fmtDuration, parseClock, fmtNum } from './util.js';
-import { ctx, go, render, tab, invalidateSessions } from './app.js';
+import { ctx, go, replace, render, tab, invalidateSessions } from './app.js';
 import {
   buildGymSession, buildSwimSession, buildOtherSession, computeSwimDistance, currentPhase,
   nextGymTemplate, nextSwimWorkout,
@@ -144,7 +144,7 @@ function saveFinished(session, priorSessions, unit) {
   store.saveSession(session);
   store.set('active', null, { silent: true });
   invalidateSessions();
-  go('session-detail', { id: session.id, celebrate: true });
+  replace('session-detail', { id: session.id, celebrate: true });
 }
 
 /** Sheet listing every workout you can start right now. */

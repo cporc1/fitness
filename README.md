@@ -49,6 +49,7 @@ No dependencies to install.
 ```bash
 npm start      # serves the folder at http://localhost:8080 (or: python3 -m http.server 8080)
 npm test       # unit tests for progression, plans, stats and plate math (node --test)
+npm run test:e2e   # end-to-end flows in a real browser (needs Playwright; see tests/e2e/README.md)
 ```
 
 Layout:
@@ -63,7 +64,7 @@ js/program.js         phases, schedule, next workout, weight suggestions
 js/stats.js           1RM, PRs, weekly summaries, nutrition, plates
 js/data/*.js          exercises, gym plans, swim workouts & drills, guides
 js/views/*.js         screens
-tests/                node:test unit tests
+tests/                node:test unit tests; tests/e2e/ has the browser flows
 ```
 
 When you add a file under `js/`, also list it in `SHELL` in `sw.js` (a test checks this) and bump `VERSION`.

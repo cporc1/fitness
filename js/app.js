@@ -4,6 +4,10 @@ import * as store from './store.js';
 import { h, icon, ICONS } from './util.js';
 import { configure as configureTimer, keepAwake, unlockAudio } from './timer.js';
 import { setCustomExercises } from './data/exercises.js';
+import { initRouter, activeTab, current, scrollFor, go, back, replace, tab, resetNav } from './router.js';
+import { applyMotionPrefs } from './motion.js';
+
+export { current, go, back, replace, tab, resetNav };
 
 const TABS = [
   { id: 'today', label: 'Today', icon: ICONS.today },
@@ -14,7 +18,6 @@ const TABS = [
 ];
 
 const routes = {};
-const nav = { tab: 'today', stack: [], scroll: {} };
 let sessionsCache = null;
 let rendering = false;
 
@@ -38,42 +41,10 @@ export function ctx() {
   };
 }
 
-export function current() {
-  return nav.stack.length ? nav.stack[nav.stack.length - 1] : { name: nav.tab, params: {} };
-}
-
-export function go(name, params = {}) {
-  nav.scroll[routeKey(current())] = window.scrollY;
-  nav.stack.push({ name, params });
-  render({ scrollTop: true });
-}
-
-export function back() {
-  nav.stack.pop();
-  render({ restoreScroll: true });
-}
-
-/** Replace the current pushed route (e.g. after saving a new record). */
-export function replace(name, params = {}) {
-  if (nav.stack.length) nav.stack[nav.stack.length - 1] = { name, params };
-  else nav.stack.push({ name, params });
-  render({ scrollTop: true });
-}
-
-export function tab(id) {
-  nav.scroll[routeKey(current())] = window.scrollY;
-  if (nav.tab === id && !nav.stack.length) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-  nav.tab = id;
-  nav.stack = [];
-  render({ restoreScroll: true });
-}
-
-function routeKey(r) { return `${r.name}:${JSON.stringify(r.params || {})}`; }
-
-function tabBar(activeTab) {
+function tabBar(active) {
   return h('nav', { class: 'tabbar', 'aria-label': 'Main' },
     TABS.map((t) => h('button', {
-      class: 'tab', type: 'button', 'aria-current': t.id === activeTab ? 'page' : 'false',
+      class: 'tab', type: 'button', 'aria-current': t.id === active ? 'page' : 'false',
       onclick: () => tab(t.id),
     }, icon(t.icon, 24), t.label)));
 }
@@ -85,19 +56,22 @@ export function render(opts = {}) {
     const appEl = document.getElementById('app');
     const state = ctx();
     applyTheme(state.settings?.theme);
+    applyMotionPrefs(state.settings);
     configureTimer({ sound: state.settings?.sound });
 
     let route = current();
     if (!state.profile?.onboarded) route = { name: 'onboarding', params: {} };
     const renderFn = routes[route.name] || routes.today;
-    const viewEl = renderFn(route.params || {}, state);
+    // `entering` is true only when arriving on a screen, never on a data
+    // refresh, so entrance animations don't replay on every save.
+    const viewEl = renderFn(route.params || {}, state, { entering: !!opts.entering });
     const fullScreen = viewEl.dataset?.full === 'true';
 
     keepAwake(!!state.active && state.settings?.wakeLock !== false && (route.name === 'session' || route.name === 'swim-session'));
 
-    appEl.replaceChildren(viewEl, fullScreen ? '' : tabBar(nav.tab));
+    appEl.replaceChildren(viewEl, fullScreen ? '' : tabBar(activeTab()));
     if (opts.scrollTop) window.scrollTo(0, 0);
-    else if (opts.restoreScroll) window.scrollTo(0, nav.scroll[routeKey(route)] || 0);
+    else if (opts.restoreScroll) window.scrollTo(0, scrollFor(route));
   } finally {
     rendering = false;
   }
@@ -116,6 +90,7 @@ export function invalidateSessions() { sessionsCache = null; }
 
 export function start() {
   store.init();
+  initRouter({ render });
   store.subscribe((name) => {
     if (name === '__sync') return;
     if (name === '*' || name.startsWith('sessions-')) sessionsCache = null;

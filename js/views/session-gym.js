@@ -155,7 +155,7 @@ function sessionEditor(session, mode) {
       const check = h('label', { class: 'check-row' },
         h('input', { type: 'checkbox', id: 'swap-always', onchange: (e) => { always = e.target.checked; } }),
         h('span', null, 'Always use the new exercise in my plan'));
-      picker.panel.insertBefore(check, picker.panel.children[2]);
+      picker.body.prepend(check);
     }
   }
 

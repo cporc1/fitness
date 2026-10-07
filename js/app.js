@@ -131,11 +131,19 @@ function applyTheme(theme) {
 
 export function invalidateSessions() { sessionsCache = null; }
 
+/** A workout that's already saved can't still be in progress: drop a stuck copy. */
+function healActive() {
+  const active = store.get('active');
+  if (active?.id && store.allSessions().some((x) => x.id === active.id)) store.set('active', null, { silent: true });
+}
+
 export function start() {
   store.init();
+  healActive();
   initRouter({ render });
   store.subscribe((name) => {
     if (name === '__sync') return;
+    if (name === '*') healActive();
     if (name === '*' || name.startsWith('sessions-')) sessionsCache = null;
     if (name === 'active') return; // session views re-render themselves
     render();

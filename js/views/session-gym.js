@@ -264,6 +264,7 @@ function sessionEditor(session, mode) {
   }
 
   function updateDots() {
+    if (!pager.isConnected) return; // a replaced screen reads as page 0
     const idx = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
     [...dots.children].forEach((d, i) => d.classList.toggle('on', i === idx));
     if (session.focusIndex !== idx) { session.focusIndex = idx; persist(); }

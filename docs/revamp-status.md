@@ -24,8 +24,9 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** all phases (0–4). The revamp is complete.
-- **Next up:** nothing required. To check on a real iPhone:
+- **Live on `main`:** all phases (0–4), plus fix 5.1.
+- **Next up:** checkpoint 5.2 in the follow-up round below.
+- **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
   - Whether the `black-translucent` status bar is worth it (white status text on the light theme).
@@ -97,6 +98,25 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - A dark-mode pass.
 - [x] **Phase 4 PR merged.** [cporc1/fitness#7](https://github.com/cporc1/fitness/pull/7)
 
+### Follow-up round: feedback from using the app
+- [x] **5.1 Finished workouts stay finished.**
+  - Bug: a workout finished from Focus mode came back as "in progress" and blocked the swim.
+  - Fix: late saves of a session that's no longer active are ignored, and Finish no longer redraws the live screen. On launch, a stuck copy of a saved workout is cleared.
+  - Shipped on its own PR.
+- [ ] **5.2 Warm-up and cool-down as real steps.**
+  - Warm-up: stretches first (they want more flexibility), then warm-up moves.
+  - Cool-down: static stretches.
+  - Each item is its own line with a photo and a target (hold time or reps), on the Workout page and in a live workout. In Focus mode each one is a page of its own.
+  - Exercise photos come from Free Exercise DB (public domain), like the rest.
+- [ ] **5.3 Full-screen rest in Focus mode.**
+  - Between sets and exercises, the rest takes over the screen: a big countdown, what's up next, and −15 s / +15 s / Skip.
+  - When the rest ends, it says Go.
+  - The list view keeps the floating rest pill.
+- [ ] **5.4 Animated swim demos.**
+  - Strokes and drills get looping animations, like the exercise photos.
+  - Only openly licensed animations are used, and each is credited.
+- [ ] **Follow-up PR merged.**
+
 ## Log
 
 - 2026-10-07: Plan reviewed and approved with changes (plan section 0). Checkpoints written.
@@ -123,3 +143,11 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - A new e2e flow checks ≤ 3 blur layers (scrolled tab, open sheet, resting in a workout), the card stack opening and closing, and that nothing loops with Reduce motion.
   - Dark mode: selected segments use `--pill`.
 - 2026-10-07: Phase 4 merged (#7). All checkpoints done; the live site serves service worker v6.
+- 2026-10-07: 5.1 done.
+  - Cause: Finish saved the workout with an event that redrew the live screen first. That copy of the Focus screen got replaced right away, read its pager as page 0, and saved the session back as active.
+  - Fixes:
+    - `saveActive` ignores a session that isn't the active one.
+    - `saveFinished` saves silently.
+    - `updateDots` skips a detached pager.
+    - `healActive()` in `app.js` clears a saved workout left behind as active.
+  - New e2e flow; SW v7.

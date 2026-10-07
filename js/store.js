@@ -113,7 +113,7 @@ export function allSessions() {
   return out.sort((a, b) => (b.date + (b.startedAt || '')).localeCompare(a.date + (a.startedAt || '')));
 }
 
-export function saveSession(session) {
+export function saveSession(session, opts) {
   // A session may have moved months if its date was edited.
   for (const [name, value] of docs) {
     if (!name.startsWith('sessions-') || name === monthKey(session.date)) continue;
@@ -126,7 +126,7 @@ export function saveSession(session) {
     const i = doc.items.findIndex((s) => s.id === session.id);
     if (i >= 0) doc.items[i] = session; else doc.items.push(session);
     return doc;
-  });
+  }, opts);
 }
 
 export function deleteSession(id) {

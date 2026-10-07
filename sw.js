@@ -1,7 +1,7 @@
 // Offline support: precache the app shell, serve it cache-first and refresh
 // in the background. Bump VERSION when shipping changes.
 
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE = `liftlap-${VERSION}`;
 const FONT_CACHE = 'liftlap-fonts';
 

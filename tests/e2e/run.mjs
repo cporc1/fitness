@@ -549,6 +549,36 @@ test('finishing with nothing ticked asks first', async ({ newPage, open, check }
   check('Save anyway still saves and celebrates', true);
 });
 
+test('a finished workout is never still in progress', async ({ newPage, open, check }) => {
+  const activeDoc = (page) => page.evaluate(() => localStorage.getItem('liftlap:v1:active'));
+  const page = await newPage();
+  await open(page, { profile: PROFILE, schedule: WEEK, settings: { sessionView: 'focus' } });
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
+  await page.locator('.pager').waitFor();
+  // Swipe to the last page, then finish from there without ticking anything.
+  await page.evaluate(() => { const p = document.querySelector('.pager'); p.scrollTo({ left: p.scrollWidth, behavior: 'instant' }); });
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('liftlap:v1:active')).focusIndex > 1, null, { timeout: 3000 });
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page.locator('.dialog').getByRole('button', { name: 'Save anyway' }).click();
+  await page.locator('.celebrate').waitFor();
+  await page.waitForTimeout(800); // longer than any pending save
+  check('Finishing from Focus clears the workout in progress', (await activeDoc(page)) === null, await activeDoc(page));
+  await btn(page, 'Done').click();
+  await page.locator('.done-card').waitFor();
+  await page.waitForTimeout(400);
+  check('Today has no resume pill after finishing', (await page.locator('.resume-pill').count()) === 0);
+  await page.locator('.wcard.swim').getByRole('button', { name: 'Start swim' }).click();
+  await page.locator('.before-swim').waitFor();
+  check('The swim starts without a "Workout in progress" question', (await page.locator('.dialog').count()) === 0);
+
+  // A stuck copy left behind by an older version heals on launch.
+  const done = gymSession('g-stuck', '2026-10-07', 'p1-a', [['leg-press', [[90, 10]]]]);
+  const stuck = await newPage();
+  await open(stuck, { profile: PROFILE, schedule: WEEK, 'sessions-2026-10': { items: [done] }, active: { ...done, view: 'focus', focusIndex: 0 } });
+  check('A saved workout left as "in progress" is cleared on launch', (await stuck.locator('.resume-pill').count()) === 0 && (await activeDoc(stuck)) === null);
+  check('…and still counts as done', (await stuck.locator('.done-card').count()) === 1);
+});
+
 test('quality: at most 3 blur layers, reduce motion stops every loop', async ({ newPage, open, check }) => {
   const blurLayers = (page) => page.evaluate(() => [...document.querySelectorAll('*')].filter((el) => {
     const cs = getComputedStyle(el);

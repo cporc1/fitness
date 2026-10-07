@@ -59,8 +59,13 @@ export function resumeActive() {
   go(active.kind === 'swim' ? 'swim-session' : 'session');
 }
 
-/** Persist the in-progress session without re-rendering the app. */
+/**
+ * Persist the in-progress session without re-rendering the app. Late saves
+ * (a debounced edit, a screen that was already replaced) for a session that
+ * was finished or discarded meanwhile are ignored, so it can't come back.
+ */
 export function saveActive(session) {
+  if (store.get('active')?.id !== session.id) return;
   store.set('active', session, { silent: true });
 }
 
@@ -117,7 +122,9 @@ function saveFinished(session, priorSessions, unit) {
   stopRest();
   const prs = session.kind === 'gym' ? detectPRs(session, priorSessions, unit) : swimPRs(session, priorSessions, session.pool?.unit);
   session.prs = prs;
-  store.saveSession(session);
+  // Silent, so the live screen isn't drawn again for a session that's over;
+  // the celebration screen renders next.
+  store.saveSession(session, { silent: true });
   store.set('active', null, { silent: true });
   invalidateSessions();
   replace('celebration', { id: session.id });

@@ -18,7 +18,8 @@ export function sessionSummary(s, profile) {
   if (s.durationSec) parts.push(fmtDuration(s.durationSec));
   if (s.kind === 'gym') {
     const sets = (s.exercises || []).reduce((n, ex) => n + ex.sets.length, 0);
-    parts.push(`${(s.exercises || []).length} exercises`, `${sets} sets`);
+    const n = (s.exercises || []).length;
+    parts.push(`${n} ${n === 1 ? 'exercise' : 'exercises'}`, `${sets} ${sets === 1 ? 'set' : 'sets'}`);
     const vol = sessionVolume(s, profile?.units || 'lb');
     if (vol) parts.push(`${fmtNum(vol, 0)} ${profile?.units || 'lb'} lifted`);
   }

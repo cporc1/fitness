@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** Phases 0 and 1 (router, glass sheets, four tabs, new Today, Workout page, Plan, Learn).
-- **Next up:** checkpoint 2.2.
+- **Next up:** Phase 2 pull request, then checkpoint 3.1.
 
 ## Checkpoints
 
@@ -66,7 +66,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - [x] **2.1 Stats.**
   - `RANGES`, `buckets`, `progressSummary` and the per-mode sections in `js/stats.js`, with unit tests.
   - Tests check that totals match the buckets and that comparisons work across a month boundary.
-- [ ] **2.2 Progress screen and History page.**
+- [x] **2.2 Progress screen and History page.**
   - Total / Workout / Swim switch and 1 week / 8 weeks / 12 weeks / 6 months ranges.
   - KPIs compared with the previous period, and animated charts.
   - Records, recent sessions, milestones, and Body when it's turned on.
@@ -105,3 +105,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: 1.3 done. Today keeps the selected day in module state (`showDay(iso)` jumps there from History). Day changes animate only `.day-content` (`html[data-vt=day-next|day-prev]`). The card → Workout page morph uses `sharedHero` in `router.js` and `view-transition-name: wk-hero`. The `day` route is gone.
 - 2026-10-07: 1.4 done. Plan has a program card (About the program opens a sheet with the phases), 7 day chips, horizontal workout cards with "Up next", your workouts with a Create card, and the Program list.
 - 2026-10-07: Phase 1 merged (#4). 2.1 done: `RANGES`, `buckets`, `periodKpis`, `progressSummary`, `setsByMuscleGroup`, `swimDistanceByStroke`, `weekRecords` in `js/stats.js` with 4 new unit tests (27 total).
+- 2026-10-07: 2.2 done. `js/views/progress.js` rewritten: mode switch (pill slides via `html[data-vt=seg]`), range chips, 4 KPIs with count-up and comparison, stacked/single columns, Strength + muscle groups (Workout), pace + strokes (Swim), records, recent, Body and milestones (Total). Charts take `animate` (only on arrival or a switch). History opens from "See all history". 11 e2e flows.

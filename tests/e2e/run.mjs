@@ -189,6 +189,8 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   await openSettings(page);
   await page.locator('.seg button', { hasText: 'kg' }).click();
   await tabTo(page, 'Progress');
+  await page.locator('.mode-switch').getByRole('tab', { name: 'Workout' }).click();
+  await page.locator('.kpi-label', { hasText: 'Lifted (kg)' }).waitFor();
   const e1 = await page.locator('.kv .v').first().textContent();
   check('Progress converts to kg', /kg/.test(e1), e1);
   await tabTo(page, 'Plan');
@@ -415,7 +417,7 @@ test('every page renders without errors', async ({ newPage, open, check }) => {
     check(`${label} renders without sideways scrolling`, over <= 0, `${over}px`);
   };
   await tabTo(page, 'Progress');
-  await visit('History', () => page.locator('.list-item', { hasText: 'History' }).click(), page.locator('.month'));
+  await visit('History', () => page.getByRole('button', { name: 'See all history' }).click(), page.locator('.month'));
   await visit('Session details', () => page.locator('.session-row').first().click(), page.locator('.page-head h1', { hasText: 'Full Body A' }));
   await btn(page, 'Back').click();
   await page.locator('.m-day').nth(8).click(); // a day in the calendar jumps to Today
@@ -437,6 +439,49 @@ test('every page renders without errors', async ({ newPage, open, check }) => {
   await visit('Workout builder', () => page.locator('.rot-card.create').click(), page.locator('#b-name'));
   await btn(page, 'Back').click();
   await visit('About the program sheet', () => page.locator('.program-card').click(), page.locator('.sheet', { hasText: 'Foundation' }));
+});
+
+test('progress: total, workout and swim over each range', async ({ newPage, open, check, shot }) => {
+  const swim = (id, date, distance, durationSec) => ({
+    id, kind: 'swim', date, name: 'Technique 1', templateId: 'swim:novice-p1-tech', distance, durationSec, pool: { len: 25, unit: 'yd' },
+    blocks: [{ name: 'Main set', items: [{ reps: 8, dist: 25, stroke: 'Free', done: Array(8).fill(true) }, { reps: 4, dist: 25, stroke: 'Breast', done: Array(4).fill(true) }] }],
+  });
+  const page = await newPage();
+  await open(page, {
+    profile: PROFILE, schedule: WEEK,
+    'sessions-2026-09': { items: [gymSession('g0', '2026-09-28', 'p1-a', [['leg-press', [[90, 12], [90, 12]]]]), swim('s0', '2026-09-29', 300, 900)] },
+    'sessions-2026-10': { items: [
+      { ...gymSession('g1', '2026-10-05', 'p1-a', [['leg-press', [[100, 15], [100, 15]]], ['lat-pulldown', [[60, 12]]]]), prs: [{ exId: 'leg-press', kind: 'weight', value: 100 }] },
+      swim('s1', '2026-10-06', 300, 840),
+    ] },
+  });
+  await tabTo(page, 'Progress');
+  const kpiBox = (label) => page.locator('.kpi', { has: page.locator('.kpi-label', { hasText: new RegExp(`^${label}`) }) });
+  const kpi = async (label) => (await kpiBox(label).locator('.kpi-value').textContent()).trim();
+  check('Total: 4 sessions in 12 weeks', (await kpi('Sessions')) === '4', await kpi('Sessions'));
+  check('Total chart has a legend for workouts and swims', (await page.locator('.legend').textContent()).includes('Workouts'));
+  await page.locator('.range-chips').getByRole('button', { name: '1 week' }).click();
+  check('1 week: 2 sessions', (await kpi('Sessions')) === '2');
+  check('1 week compares with the previous 7 days', (await kpiBox('Sessions').locator('.kpi-delta').textContent()).includes('Same as previous 7 days'));
+  await shot(page, 'progress-total', true);
+  await page.locator('.mode-switch').getByRole('tab', { name: 'Workout' }).click();
+  await page.locator('.kpi-label', { hasText: 'Lifted' }).waitFor();
+  check('Workout: lifted volume this week', (await kpi('Lifted')) === '3,720', await kpi('Lifted'));
+  check('Workout: muscle groups', (await page.locator('.hbar', { hasText: 'Legs' }).count()) === 1 && (await page.locator('.hbar', { hasText: 'Back' }).count()) === 1);
+  check('Workout: records list the PR', (await page.locator('.pr', { hasText: 'Leg Press' }).count()) === 1);
+  await shot(page, 'progress-workout', true);
+  await page.locator('.mode-switch').getByRole('tab', { name: 'Swim' }).click();
+  await page.locator('.kpi-label', { hasText: 'Distance' }).waitFor();
+  check('Swim: distance this week', (await kpi('Distance')) === '300');
+  check('Swim: pace per 100', (await kpi('Pace')) === '4:40', await kpi('Pace'));
+  check('Swim: pace improved vs last week', (await kpiBox('Pace').locator('.kpi-delta').textContent()).includes('20 s faster'));
+  check('Swim: distance by stroke', (await page.locator('.hbar', { hasText: 'Freestyle' }).count()) === 1);
+  for (const r of ['8 weeks', '12 weeks', '6 months']) {
+    await page.locator('.range-chips').getByRole('button', { name: r }).click();
+    check(`Swim over ${r} renders`, (await page.locator('.kpi').count()) === 4);
+  }
+  await shot(page, 'progress-swim', true);
+  check('Recent lists swims only', (await page.locator('.session-row').count()) === 2);
 });
 
 await run();

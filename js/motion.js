@@ -30,3 +30,20 @@ export function easing(name, fallback = 'cubic-bezier(.2, .8, .2, 1)') {
   }
   return easings[name];
 }
+
+/**
+ * Count a number up (or down) inside `el`, from `from` to `to`, writing
+ * format(value) each frame. Instant when motion is reduced.
+ */
+export function countUp(el, from, to, format, duration = 650) {
+  if (reducedMotion() || from === to || !Number.isFinite(from) || !Number.isFinite(to)) { el.textContent = format(to); return; }
+  const start = performance.now();
+  el.textContent = format(from);
+  const step = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - (1 - t) ** 3;
+    el.textContent = format(from + (to - from) * eased);
+    if (t < 1 && el.isConnected !== false) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}

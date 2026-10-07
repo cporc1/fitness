@@ -34,6 +34,17 @@ function prText(pr, unit, poolUnit) {
   return `${name}: most reps, ${pr.value}`;
 }
 
+/** "Warm-up 7/7 · Cool-down 5/5": stretching counts too. */
+export function routineChips(x) {
+  const chip = (label, items) => {
+    if (!items?.length) return null;
+    const n = items.filter((it) => it.done).length;
+    return h('span', { class: `chip ${n === items.length ? 'good' : 'plain'}` }, n === items.length ? icon(ICONS.check, 14) : null, `${label} ${n}/${items.length}`);
+  };
+  const chips = [chip('Warm-up', x.warmup), chip('Cool-down', x.cooldown)].filter(Boolean);
+  return chips.length ? h('div', { class: 'routine-chips' }, chips) : null;
+}
+
 registerRoute('celebration', ({ id }, state, { entering }) => {
   const x = state.sessions.find((it) => it.id === id);
   if (!x) { setTimeout(() => tab('today'), 0); return h('div', { class: 'view' }); }
@@ -72,6 +83,7 @@ registerRoute('celebration', ({ id }, state, { entering }) => {
       h('h1', null, swim ? 'Swim complete' : 'Workout complete'),
       h('p', { class: 'ink-2' }, `${x.name}${counts.planned ? ` · ${counts.done} of ${counts.planned} ${swim ? 'swims' : 'workouts'} this week` : ''}`)),
     h('div', { class: 'cel-stats' }, stats.map(([k, v]) => h('div', { class: 'kpi' }, h('span', { class: 'kpi-label' }, k), h('span', { class: 'kpi-value' }, v)))),
+    routineChips(x),
     x.prs?.length ? h('div', { class: 'pr-list' }, x.prs.map((pr, i) => h('div', { class: 'pr medal', style: { '--i': String(i) } },
       icon(ICONS.trophy, 22), h('span', null, prText(pr, unit, poolUnit))))) : null,
     h('div', { class: 'field' },

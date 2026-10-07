@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** all phases (0–4), plus fix 5.1.
-- **Next up:** checkpoint 5.2 in the follow-up round below.
+- **Live on `main`:** all phases (0–4) and the follow-up round (5.1–5.4).
+- **Next up:** nothing required.
 - **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
@@ -102,20 +102,20 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - [x] **5.1 Finished workouts stay finished.**
   - Bug: a workout finished from Focus mode came back as "in progress" and blocked the swim.
   - Fix: late saves of a session that's no longer active are ignored, and Finish no longer redraws the live screen. On launch, a stuck copy of a saved workout is cleared.
-  - Shipped on its own PR.
-- [ ] **5.2 Warm-up and cool-down as real steps.**
+  - Shipped on its own PR: [cporc1/fitness#9](https://github.com/cporc1/fitness/pull/9).
+- [x] **5.2 Warm-up and cool-down as real steps.**
   - Warm-up: stretches first (they want more flexibility), then warm-up moves.
   - Cool-down: static stretches.
   - Each item is its own line with a photo and a target (hold time or reps), on the Workout page and in a live workout. In Focus mode each one is a page of its own.
   - Exercise photos come from Free Exercise DB (public domain), like the rest.
-- [ ] **5.3 Full-screen rest in Focus mode.**
+- [x] **5.3 Full-screen rest in Focus mode.**
   - Between sets and exercises, the rest takes over the screen: a big countdown, what's up next, and −15 s / +15 s / Skip.
   - When the rest ends, it says Go.
   - The list view keeps the floating rest pill.
-- [ ] **5.4 Animated swim demos.**
+- [x] **5.4 Animated swim demos.**
   - Strokes and drills get looping animations, like the exercise photos.
-  - Only openly licensed animations are used, and each is credited.
-- [ ] **Follow-up PR merged.**
+  - They're original drawings made in code, so there's nothing to license or credit. Openly licensed animations didn't cover the drills.
+- [x] **Follow-up PR merged.** [cporc1/fitness#10](https://github.com/cporc1/fitness/pull/10)
 
 ## Log
 
@@ -151,3 +151,38 @@ Start a new Claude Code session on `cporc1/fitness` and say:
     - `updateDots` skips a detached pager.
     - `healActive()` in `app.js` clears a saved workout left behind as active.
   - New e2e flow; SW v7.
+- 2026-10-07: 5.2 done.
+  - New exercises: 16 stretches (new Stretching group in Learn), plus Bodyweight Squat and Incline Push-Up. Photos are from Free Exercise DB.
+  - Routines: `WARMUPS` / `COOLDOWNS` in `plans.js`, one each for full, upper and lower days.
+    - The warm-up is stretches first (gentle movement, holds of 30 s or less), then moves.
+    - The cool-down is 30–45 s holds.
+    - `routineKind()` in `program.js` picks the set; your own workouts are judged by their exercises.
+  - Sessions carry `warmup` / `cooldown` items with `done` flags; a saved workout keeps `{ ex, done }` only.
+  - Workout page: Warm-up · Exercises · Cool-down sections, every item a row with a photo that opens its sheet.
+  - List view: a checkable card at each end.
+  - Focus view:
+    - One page per item, then a Finish page.
+    - Holds get a timer with a 5 s "switch sides" gap; it ticks the item and moves on.
+    - Green dots mark warm-up and cool-down pages.
+  - The celebration and History show "Warm-up 7/7 · Cool-down 5/5". The swim's dry warm-up uses the same rows. SW v8.
+- 2026-10-07: 5.3 done.
+  - In Focus mode, `restScreen()` in `session-gym.js` covers the screen while a rest runs:
+    - a countdown ring (`countdownRing()` in `timer.js`), −15 s / +15 s, and "Up next" with the set and its planned weight;
+    - Skip rest, which becomes "Start set N" once the rest is over.
+  - "Show workout" tucks it into the rest bar (`restBar({ visible })`); tapping the bar brings it back.
+  - While a sheet scales the page, `html.sheet-open .rest-screen` pins it to the visible part.
+  - The list view keeps the rest bar and the pace clock.
+- 2026-10-07: 5.4 done.
+  - `js/swim-anim.js` draws a side-view swimmer in SVG for all 4 stroke guides and all 15 drills:
+    - keyframed joint angles (`track()` for Catmull-Rom loops, `poses()` for pose-to-pose);
+    - `reach()` keeps feet on the floor and hands on the wall;
+    - captions name the phase; bubbles show breathing out; there is a kickboard, buoy and wall where the drill uses them.
+  - It runs only while on screen, at up to 30 fps; a tap pauses it. With reduced motion it holds one pose.
+  - Where it shows:
+    - the how-to sheet (above the video);
+    - stills on Today's swim card and the Workout page rows;
+    - the live swim card (tap for the how-to);
+    - animated stroke tiles and drill stills in Learn.
+  - The 18 new stretches and moves also got short demo videos, each checked to exist and allow embedding.
+  - SW v9.
+- 2026-10-07: Follow-up round merged (#9, #10). All checkpoints done; the live site serves service worker v9.

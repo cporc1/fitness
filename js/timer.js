@@ -181,21 +181,33 @@ export function miniClock() {
   return { el, update };
 }
 
-/** The rest bar pinned to the bottom during a session. */
-export function restBar({ onOpen } = {}) {
+/** A large ring that empties as a countdown runs. update(remaining, total). */
+export function countdownRing(className = '') {
+  const arc = s('path', { class: 'arc', d: '' });
+  const el = s('svg', { class: `count-ring ${className}`.trim(), viewBox: '0 0 200 200', 'aria-hidden': 'true' },
+    s('circle', { class: 'face', cx: C, cy: C, r: 88 }), arc);
+  function update(rem, total) {
+    const frac = total ? Math.max(0, Math.min(1, rem / total)) : 0;
+    arc.setAttribute('d', frac > 0 ? arcPath(0, frac * 360, 88) : '');
+  }
+  return { el, update };
+}
+
+/** The rest bar pinned to the bottom during a session. visible() can keep it tucked away. */
+export function restBar({ onOpen, visible = () => true, openLabel = 'Show pace clock' } = {}) {
   const clock = miniClock();
   const time = h('div', { class: 'rb-time' }, '0:00');
   const label = h('div', { class: 'rb-label' }, 'Rest');
   const bar = h('div', { class: 'rest-bar', hidden: true, role: 'timer', 'aria-live': 'off' },
     clock.el,
-    h('button', { class: 'grow', style: { background: 'none', border: 0, color: 'inherit', textAlign: 'left', cursor: 'pointer', padding: 0 }, onclick: () => onOpen?.(), 'aria-label': 'Show pace clock' },
+    h('button', { class: 'grow', style: { background: 'none', border: 0, color: 'inherit', textAlign: 'left', cursor: 'pointer', padding: 0 }, onclick: () => onOpen?.(), 'aria-label': openLabel },
       label, time),
     h('button', { class: 'rb-btn', onclick: () => adjustRest(-15), 'aria-label': 'Subtract 15 seconds' }, '−15'),
     h('button', { class: 'rb-btn', onclick: () => adjustRest(15), 'aria-label': 'Add 15 seconds' }, '+15'),
     h('button', { class: 'rb-btn', onclick: () => stopRest() }, 'Skip'));
   function update(rs) {
-    bar.hidden = !rs.running;
-    if (!rs.running) return;
+    bar.hidden = !rs.running || !visible();
+    if (bar.hidden) return;
     const over = rs.remaining <= 0;
     bar.classList.toggle('over', over);
     time.textContent = over ? `+${fmtClock(-rs.remaining)}` : fmtClock(Math.ceil(rs.remaining));
@@ -204,5 +216,5 @@ export function restBar({ onOpen } = {}) {
   }
   update(restState());
   const off = onRestChange(update);
-  return { el: bar, destroy: off };
+  return { el: bar, destroy: off, update: () => update(restState()) };
 }

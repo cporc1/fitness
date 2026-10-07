@@ -10,6 +10,7 @@ import { openLogOther } from '../actions.js';
 import { showDay } from './today.js';
 import { fmtSet, openExerciseSheet } from './library.js';
 import { describeItem } from './session-swim.js';
+import { routineChips } from './celebration.js';
 
 const KIND_ICON = { gym: ICONS.dumbbell, swim: ICONS.wave, other: ICONS.note };
 
@@ -142,7 +143,7 @@ registerRoute('session-detail', ({ id }, state) => {
     if (pace) kv.push(h('div', null, h('span', { class: 'k' }, `Per 100 ${s.pool?.unit}`), h('span', { class: 'v' }, `${Math.floor(pace / 60)}:${String(Math.round(pace % 60)).padStart(2, '0')}`)));
   }
   if (s.rpe) kv.push(h('div', null, h('span', { class: 'k' }, 'Effort'), h('span', { class: 'v' }, `${s.rpe}/10`)));
-  put(view, h('div', { class: 'card' }, h('div', { class: 'kv' }, kv)));
+  put(view, h('div', { class: 'card' }, h('div', { class: 'kv' }, kv)), routineChips(s));
 
   if (s.prs?.length) {
     put(view, h('div', { class: 'pr-list' }, s.prs.map((pr) => h('div', { class: 'pr' }, icon(ICONS.trophy, 20),

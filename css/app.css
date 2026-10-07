@@ -694,6 +694,70 @@ html[data-vt="day-prev"]::view-transition-new(day-content) { animation: day-in-l
 .st-label { font-size: var(--fs-xs); font-weight: 700; color: var(--muted); }
 .complete-set { min-height: 60px; }
 
+/* ---------- warm-up and cool-down ---------- */
+.group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-inline: 4px; }
+.group-head .group-title { padding-left: 0; }
+.list-sub { padding: 12px 14px 4px; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.list-item + .list-sub, .rt-row + .list-sub { border-top: 1px solid var(--line); }
+.routine-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; }
+.routine-card.complete { border-color: color-mix(in srgb, var(--good) 45%, var(--line)); }
+.rt-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 16px 2px; }
+.rt-title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1.1; }
+.rt-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 14px; }
+.rt-row + .rt-row { border-top: 1px solid var(--line); }
+.rt-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 4px 0; border: 0; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.rt-main .grow { display: flex; flex-direction: column; min-width: 0; }
+.rt-main .li-title { font-weight: 600; }
+.rt-main .li-sub { font-size: var(--fs-sm); color: var(--muted); }
+.rt-row.done .set-check { background: var(--good); border-color: var(--good); color: var(--on-accent); }
+.rt-row.done .li-title { color: var(--ink-2); }
+.rt-foot { margin: 0; padding: 4px 16px 12px; }
+.routine-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.dry-list { margin-inline: -16px; }
+.hold-timer { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.ht-dial { position: relative; width: 148px; height: 148px; }
+.ht-dial .count-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ht-read { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.ht-time { font-family: var(--font-display); font-weight: 700; font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+.ht-label { font-size: var(--fs-xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.count-ring .face { fill: none; stroke: var(--surface-2); stroke-width: 12; }
+.count-ring .arc { fill: none; stroke: var(--good); stroke-width: 12; stroke-linecap: round; }
+.hold-timer.switching .count-ring .arc { stroke: var(--iron); }
+.rt-done-badge { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 14px; background: var(--good-wash); color: var(--good-ink); font-weight: 700; }
+.pager-dots span.rt.on { background: var(--good); }
+.pager-dots span.gap { margin-left: 6px; }
+
+/* ---------- full-screen rest (Focus) ---------- */
+.rest-screen {
+  position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; gap: 16px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 20px calc(env(safe-area-inset-bottom, 0px) + 20px);
+  background: var(--bg); overflow-y: auto; overscroll-behavior: contain;
+  animation: rs-in .28s var(--ease-snappy) both;
+}
+/* While a sheet scales the page, fixed means "inside the page": pin to the visible part. */
+html.sheet-open .rest-screen, html.sheet-closing .rest-screen { top: var(--vy, 0px); bottom: auto; height: 100vh; }
+.rest-screen.over { background: color-mix(in srgb, var(--good) 12%, var(--bg)); }
+.rs-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.rs-dial { position: relative; width: min(66vw, 280px); aspect-ratio: 1; margin: 4px auto 0; flex: none; }
+.rs-dial .count-ring { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rs-ring .face { stroke-width: 10; }
+.rs-ring .arc { stroke: var(--iron); stroke-width: 10; }
+.rest-screen.over .rs-ring .arc { stroke: var(--good); }
+.rs-read { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.rs-time { font-family: var(--font-display); font-weight: 700; font-size: clamp(56px, 18vw, 76px); line-height: 1; font-variant-numeric: tabular-nums; }
+.rs-label { font-size: var(--fs-sm); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rest-screen.over .rs-label { color: var(--good-ink); }
+.rest-screen.over .rs-time { font-size: clamp(46px, 14vw, 60px); }
+.rs-adjust { display: flex; justify-content: center; gap: 10px; }
+.rs-adjust .btn { min-width: 96px; }
+.rs-next { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.rs-next .grow { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.rs-next .ex-thumb { width: 64px; height: 48px; }
+.rs-next-name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); line-height: 1.15; }
+.rs-next-sub { font-size: var(--fs-sm); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.rs-go { margin-top: auto; min-height: 60px; flex: none; }
+@keyframes rs-in { from { opacity: 0; transform: scale(.98); } }
+
 /* ---------- rest timer ---------- */
 .rest-bar {
   position: fixed; z-index: 40; left: 0; right: 0; margin: 0 auto; bottom: var(--tabbar-gap);
@@ -992,6 +1056,33 @@ html[data-vt="seg"]::view-transition-old(root), html[data-vt="seg"]::view-transi
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { animation: none !important; transition: none !important; }
+
+/* ---------- swim demos (js/swim-anim.js) ---------- */
+.swim-anim { display: block; width: 100%; height: auto; border-radius: 18px; background: color-mix(in srgb, var(--pool) 5%, var(--surface)); }
+.swim-anim .sa-water { fill: color-mix(in srgb, var(--pool) 15%, var(--surface)); }
+.swim-anim .sa-surface { fill: none; stroke: color-mix(in srgb, var(--pool) 60%, transparent); stroke-width: 2; stroke-linecap: round; }
+.swim-anim .sa-lane { stroke: color-mix(in srgb, var(--pool) 28%, transparent); stroke-width: 3; stroke-dasharray: 14 10; }
+.swim-anim .sa-floor { fill: color-mix(in srgb, var(--pool) 26%, var(--surface)); }
+.swim-anim .sa-wall { fill: color-mix(in srgb, var(--ink) 16%, var(--surface)); }
+.swim-anim .sa-limb { stroke: var(--ink); stroke-linecap: round; }
+.swim-anim .sa-far { opacity: .36; }
+.swim-anim .sa-arm { stroke-width: 8.5; }
+.swim-anim .sa-leg { stroke-width: 10; }
+.swim-anim .sa-foot { stroke-width: 6; }
+.swim-anim .sa-torso { stroke-width: 17; }
+.swim-anim .sa-head, .swim-anim .sa-fist { fill: var(--ink); }
+.swim-anim .sa-cap, .swim-anim .sa-board, .swim-anim .sa-buoy ellipse { fill: var(--iron); }
+.swim-anim .sa-bubble { fill: none; stroke: var(--pool); stroke-width: 1.5; }
+.swim-anim .sa-breath, .swim-anim .sa-splash { fill: none; stroke: var(--pool); stroke-width: 1.8; stroke-linecap: round; }
+.swim-anim .sa-caption { font-family: var(--font-display); font-size: 13px; font-weight: 700; fill: var(--ink-2); }
+.swim-anim.no-caption .sa-caption { display: none; }
+.swim-anim.thumb { width: 56px; height: 36px; border-radius: 8px; flex: none; }
+.wc-thumbs .swim-anim.thumb { width: 72px; height: 46px; border-radius: 12px; }
+.tile-anim { overflow: hidden; }
+.tile-anim .swim-anim { width: 100%; height: 100%; border-radius: 0; }
+.fc-demo { display: block; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 16px; overflow: hidden; }
+.fc-demo .swim-anim { border-radius: 16px; aspect-ratio: 5 / 2; }
+.swim-anim.paused { opacity: .85; }
 
 /* ---------- demo media ---------- */
 .demo-figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }

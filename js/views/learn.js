@@ -7,7 +7,8 @@ import { go, back, replace, registerRoute } from '../app.js';
 import { GROUPS, allExercises } from '../data/exercises.js';
 import { DRILLS, STROKE_GUIDES } from '../data/swim.js';
 import { GUIDES } from '../data/guides.js';
-import { framesFor, videoFor } from '../data/media.js';
+import { framesFor } from '../data/media.js';
+import { swimDemo, swimThumb } from '../swim-anim.js';
 import { exerciseMatches, openExerciseSheet, openDrillSheet, openCustomExerciseForm } from './library.js';
 import { topbar, pageHead, sectionHead, input, listItem } from '../ui.js';
 
@@ -31,14 +32,14 @@ function exerciseTile(e) {
 }
 
 function strokeTile(g) {
-  const v = videoFor(g.id);
+  const demo = swimDemo(g.id, { name: g.name, caption: false, pausable: false });
+  demo?.setAttribute('preserveAspectRatio', 'xMidYMid slice');
   return h('button', { class: 'tile', type: 'button', onclick: () => openDrillSheet(g.id) },
-    v ? h('img', { class: 'tile-img wide', src: `https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`, alt: '', loading: 'lazy' })
-      : h('span', { class: 'tile-img wide tile-ph swim' }, icon(ICONS.wave, 28)),
+    demo ? h('span', { class: 'tile-img wide tile-anim' }, demo) : h('span', { class: 'tile-img wide tile-ph swim' }, icon(ICONS.wave, 28)),
     h('span', { class: 'tile-name' }, g.name));
 }
 
-const drillRow = (d) => listItem({ title: d.name, sub: d.purpose, onclick: () => openDrillSheet(d.id) });
+const drillRow = (d) => listItem({ title: d.name, sub: d.purpose, leading: swimThumb(d.id), onclick: () => openDrillSheet(d.id) });
 const guideRow = (g) => listItem({ title: g.title, sub: `${g.mins} min · ${g.summary}`, onclick: () => go('guide', { id: g.id }) });
 
 function exercisesSection(redraw) {

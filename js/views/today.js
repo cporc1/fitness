@@ -13,6 +13,8 @@ import { planForDay, programWeek, PROGRAM_WEEKS, slotForDate, nextGymTemplate } 
 import { TIPS } from '../data/guides.js';
 import { weekSummary } from '../stats.js';
 import { framesFor } from '../data/media.js';
+import { guideForItem } from '../data/swim.js';
+import { swimThumb } from '../swim-anim.js';
 import { startGym, startSwim, openStartPicker, openLogOther } from '../actions.js';
 import { sectionHead, sheet, input, field, toast, ring } from '../ui.js';
 import { workoutSummary } from './workout.js';
@@ -117,6 +119,15 @@ function thumbs(items) {
     items.length > shown.length ? h('span', { class: 'wc-more' }, `+${items.length - shown.length}`) : null);
 }
 
+/** The strokes and drills in a swim, as small stills. */
+function swimThumbs(blocks) {
+  const ids = [...new Set(blocks.flatMap((b) => b.items.map(guideForItem)).filter(Boolean))];
+  const shown = ids.slice(0, 4);
+  return shown.length ? h('div', { class: 'wc-thumbs swim', 'aria-hidden': 'true' },
+    shown.map((id) => swimThumb(id)),
+    ids.length > shown.length ? h('span', { class: 'wc-more' }, `+${ids.length - shown.length}`) : null) : null;
+}
+
 /** Compact card for one planned session: what it is, Start, and Details. */
 function workoutCard(state, part, { step, total, canStart }) {
   const t = part.template;
@@ -130,6 +141,7 @@ function workoutCard(state, part, { step, total, canStart }) {
   };
   const body = swim
     ? [
+      swimThumbs(sum.blocks),
       h('div', { class: 'wc-line' }, sum.blocks.map((b) => b.name).join(' · ')),
       t.focus ? h('p', { class: 'wc-hint' }, t.focus) : null]
     : [

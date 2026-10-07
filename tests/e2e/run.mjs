@@ -402,4 +402,41 @@ test('today: card morphs into the workout page and back', async ({ newPage, open
   check('The name is cleared after coming back', (await page.locator('.wcard.gym').evaluate((el) => el.style.viewTransitionName)) === '');
 });
 
+test('every page renders without errors', async ({ newPage, open, check }) => {
+  const page = await newPage();
+  await open(page, {
+    profile: PROFILE, schedule: WEEK, settings: { trackBody: true },
+    'sessions-2026-10': { items: [gymSession('a2', '2026-10-05', 'p1-a', [['leg-press', [[100, 15], [100, 15], [100, 15]]]])] },
+  });
+  const visit = async (label, open, ready) => {
+    await open();
+    await ready.waitFor();
+    const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(`${label} renders without sideways scrolling`, over <= 0, `${over}px`);
+  };
+  await tabTo(page, 'Progress');
+  await visit('History', () => page.locator('.list-item', { hasText: 'History' }).click(), page.locator('.month'));
+  await visit('Session details', () => page.locator('.session-row').first().click(), page.locator('.page-head h1', { hasText: 'Full Body A' }));
+  await btn(page, 'Back').click();
+  await page.locator('.m-day').nth(8).click(); // a day in the calendar jumps to Today
+  await page.locator('.tabbar [aria-current="page"]', { hasText: 'Today' }).waitFor();
+  check('Tapping a calendar day opens it on Today', (await page.locator('.wday[aria-pressed="true"]').count()) === 1);
+  await tabTo(page, 'Learn');
+  await visit('A guide', () => page.locator('.list-item', { hasText: 'Start here' }).click(), page.locator('.prose'));
+  await btn(page, 'Back').click();
+  for (const tool of ['Plate calculator', '1-rep max', 'Swim pace', 'Calories & protein']) {
+    await visit(`Tool: ${tool}`, () => page.locator('.list-item', { hasText: tool }).click(), page.locator('.seg'));
+    await btn(page, 'Back').click();
+  }
+  await openSettings(page);
+  for (const [row, ready] of [['Backup & data', 'Export backup'], ['Install on iPhone', 'Put it on your Home Screen'], ['Habits', 'Avg sleep (7 days)'], ['Body log', 'Tap an entry to delete it.']]) {
+    await visit(row, () => page.locator('.list-item', { hasText: row }).click(), page.getByText(ready).first());
+    await btn(page, 'Back').click();
+  }
+  await tabTo(page, 'Plan');
+  await visit('Workout builder', () => page.locator('.rot-card.create').click(), page.locator('#b-name'));
+  await btn(page, 'Back').click();
+  await visit('About the program sheet', () => page.locator('.program-card').click(), page.locator('.sheet', { hasText: 'Foundation' }));
+});
+
 await run();

@@ -9,7 +9,7 @@ import { getExercise } from '../data/exercises.js';
 import { programWeek, currentPhase, PROGRAM_WEEKS, templateById } from '../program.js';
 import { startGym, startSwim } from '../actions.js';
 import { pageHead, sectionHead, sheet, listItem, confirmDialog, toast, topbar, input, field, select, segmented } from '../ui.js';
-import { exercisePicker, exThumb } from './library.js';
+import { exercisePicker, exThumb, openExerciseSheet, openDrillSheet } from './library.js';
 import { describeItem, howToLink } from './session-swim.js';
 
 function slotLabel(slot, custom) {
@@ -206,11 +206,11 @@ registerRoute('template', ({ id }, state) => {
     for (const b of blocks) {
       put(view, h('section', { class: 'swim-block' }, h('h3', null, b.name), b.items.map((it) => {
         const guide = guideForItem(it);
-        return h('div', { class: `swim-item${guide ? ' tap-row' : ''}`, onclick: guide ? () => go('drill', { id: guide }) : null },
+        return h('div', { class: `swim-item${guide ? ' tap-row' : ''}`, onclick: guide ? () => openDrillSheet(guide) : null },
           h('div', { class: 'si-main' }, h('span', { class: 'si-reps' }, `${it.reps} ×`), h('span', { class: 'si-what' }, describeItem(it, unitD))),
           h('div', { class: 'si-meta' }, it.rest ? `rest ${it.rest} s` : 'no set rest'),
           it.note ? h('div', { class: 'small ink-2' }, it.note) : null,
-          howToLink(it, (gid) => go('drill', { id: gid }), ' →'));
+          howToLink(it, openDrillSheet, ' →'));
       })));
     }
     put(view, h('button', { class: 'btn pool lg block', onclick: () => startSwim(t) }, icon(ICONS.play, 20), 'Start this swim'));
@@ -224,7 +224,7 @@ registerRoute('template', ({ id }, state) => {
         title: def?.name || exId,
         sub: `${item.sets} × ${item.reps[0]}–${item.reps[1]}${unitWord}${item.rest ? ` · rest ${fmtClock(item.rest)}` : ''}${swaps[item.ex] ? ' · swapped' : ''}`,
         leading: exThumb(exId),
-        onclick: () => go('exercise', { id: exId }),
+        onclick: () => openExerciseSheet(exId),
       });
     }))));
     put(view, 

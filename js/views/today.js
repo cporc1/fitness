@@ -8,6 +8,7 @@ import { TIPS } from '../data/guides.js';
 import { weekSummary, weekStreak } from '../stats.js';
 import { startGym, startSwim, resumeActive, openStartPicker, openLogOther } from '../actions.js';
 import { sectionHead, lanes, sheet, input, field, toast, topbar } from '../ui.js';
+import { openExerciseSheet } from './library.js';
 
 function greeting(name) {
   const hr = new Date().getHours();
@@ -79,7 +80,7 @@ function gymHero(state, t, isToday, step) {
     h('ul', { class: 'hero-list' }, exs.map((item) => {
       const def = getExercise(swaps[item.ex] || item.ex);
       const w = def?.type === 'time' ? 's' : '';
-      return h('li', null, h('button', { class: 'hero-link', type: 'button', onclick: () => go('exercise', { id: def?.id || item.ex }) },
+      return h('li', null, h('button', { class: 'hero-link', type: 'button', onclick: () => openExerciseSheet(def?.id || item.ex) },
         h('span', { class: 't' }, def?.name || item.ex),
         h('span', { class: 'v' }, `${item.sets} × ${item.reps[0]}–${item.reps[1]}${w}`, icon(ICONS.chevron, 14))));
     })),
@@ -222,16 +223,9 @@ registerRoute('today', (_params, state) => {
       h('div', { class: 'stack', style: { gap: '6px' } },
         h('div', { class: 'eyebrow' }, `${fmtDate(today, { weekday: true })} · ${programDone ? 'Plan complete' : `Week ${week} of ${PROGRAM_WEEKS}`} · ${plan.phase.name}`),
         h('h1', null, greeting(state.profile?.name))),
-      h('button', { class: 'icon-btn', 'aria-label': 'Start a different workout', onclick: openStartPicker }, icon(ICONS.plus, 26))));
-
-  if (state.active) {
-    const a = state.active;
-    const mins = Math.floor((Date.now() - new Date(a.startedAt)) / 1000);
-    put(view, h('button', { class: 'resume-bar', onclick: resumeActive },
-      h('span', { class: 'pulse' }),
-      h('span', { class: 'grow' }, h('span', { class: 'r-title' }, `${a.name} in progress`), h('span', { class: 'r-sub' }, `Started ${fmtClock(mins)} ago · tap to continue`)),
-      icon(ICONS.chevron)));
-  }
+      h('div', { class: 'row', style: { gap: '2px' } },
+        h('button', { class: 'icon-btn', 'aria-label': 'Start a different workout', onclick: openStartPicker }, icon(ICONS.plus, 26)),
+        h('button', { class: 'icon-btn', 'aria-label': 'Settings', onclick: () => go('settings') }, icon(ICONS.gear, 24)))));
 
   if (programDone) {
     put(view, h('div', { class: 'callout' }, h('strong', null, 'You finished the 12-week plan. '),

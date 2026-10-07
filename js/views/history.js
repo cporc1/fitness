@@ -1,4 +1,4 @@
-// Log tab: calendar + list of past sessions, and session details.
+// History (pushed from Progress): calendar + list of past sessions, and session details.
 
 import * as store from '../store.js';
 import { h, icon, ICONS, todayISO, toISODate, fmtDate, fmtMonth, fmtDuration, fmtNum, parseISODate, relativeDay, put } from '../util.js';
@@ -7,7 +7,7 @@ import { getExercise } from '../data/exercises.js';
 import { sessionVolume, pacePer100 } from '../stats.js';
 import { pageHead, topbar, confirmDialog, toast } from '../ui.js';
 import { openLogOther } from '../actions.js';
-import { fmtSet } from './library.js';
+import { fmtSet, openExerciseSheet } from './library.js';
 import { describeItem } from './session-swim.js';
 
 const KIND_ICON = { gym: ICONS.dumbbell, swim: ICONS.wave, other: ICONS.note };
@@ -84,10 +84,11 @@ function monthGrid(sessions) {
 
 const filterState = { kind: 'all' };
 
-registerRoute('log', (_p, state) => {
+registerRoute('history', (_p, state) => {
   const list = state.sessions.filter((s) => filterState.kind === 'all' || s.kind === filterState.kind);
   const view = h('div', { class: 'view' },
-    pageHead('Log', `${state.sessions.length} ${state.sessions.length === 1 ? 'workout' : 'workouts'} logged`),
+    topbar({ title: '', onBack: back }),
+    pageHead('History', `${state.sessions.length} ${state.sessions.length === 1 ? 'workout' : 'workouts'} logged`),
     monthGrid(state.sessions),
     h('div', { class: 'row between' },
       h('div', { class: 'filter-row', style: { margin: 0, padding: 0 } }, [['all', 'All'], ['gym', 'Gym'], ['swim', 'Swim'], ['other', 'Other']].map(([k, l]) => h('button', {
@@ -156,7 +157,7 @@ registerRoute('session-detail', ({ id, celebrate }, state) => {
     for (const ex of s.exercises || []) {
       const def = getExercise(ex.ex);
       put(view, h('div', { class: 'card' },
-        h('div', { class: 'row between' }, h('strong', null, def?.name || ex.ex), h('button', { class: 'btn text sm', onclick: () => go('exercise', { id: ex.ex }) }, 'History')),
+        h('div', { class: 'row between' }, h('strong', null, def?.name || ex.ex), h('button', { class: 'btn text sm', onclick: () => openExerciseSheet(ex.ex) }, 'History')),
         h('div', { class: 'stack', style: { gap: '4px' } }, ex.sets.map((st, i) => h('div', { class: 'row num small' },
           h('span', { class: 'muted', style: { width: '48px' } }, `Set ${i + 1}`),
           h('span', null, fmtSet(st, ex.type || def?.type, s.unit || unit)))))));

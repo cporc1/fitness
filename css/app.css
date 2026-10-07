@@ -36,6 +36,7 @@
   --r-md: 12px;
   --r-lg: 18px;
   --tabbar-h: 64px;
+  --tabbar-gap: max(10px, calc(env(safe-area-inset-bottom, 0px) - 6px)); /* floats above the home indicator */
 
   /* Glass: real blur only on chrome (tab bar, top bars, sheets, pills);
      content cards use faux glass with no blur. At most 3 blur layers live. */
@@ -148,9 +149,10 @@ p { margin: 0; }
   max-width: 640px;
   margin: 0 auto;
   padding-inline: 16px;
-  padding-block: 12px calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 28px);
+  padding-block: 12px calc(var(--tabbar-h) + var(--tabbar-gap) + 28px);
   display: flex; flex-direction: column; gap: 18px;
 }
+.has-resume .view { padding-bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 90px); }
 .view.full { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 120px); }
 
 .topbar {
@@ -172,22 +174,42 @@ p { margin: 0; }
 .icon-btn.sm { width: 36px; height: 36px; }
 
 .page-head { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; }
+.title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+.title-row > .page-head { flex: 1; min-width: 0; }
+.group-title { padding-left: 4px; }
 .page-head h1 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-2xl); letter-spacing: .005em; }
 
+/* Floating glass tab bar; the active tab's pill slides between tabs
+   (it has its own view-transition-name). */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(5, 1fr);
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: saturate(1.5) blur(16px); -webkit-backdrop-filter: saturate(1.5) blur(16px);
-  border-top: 1px solid var(--line);
+  position: fixed; z-index: 30; left: 0; right: 0; bottom: var(--tabbar-gap); margin: 0 auto;
+  width: min(calc(100% - 28px), 420px); height: var(--tabbar-h); padding: 6px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; border-radius: 32px;
 }
 .tab {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  border: 0; background: none; padding: 6px 0; min-height: 50px; cursor: pointer;
-  color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .02em;
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border: 0; background: none; padding: 0; border-radius: 26px; cursor: pointer;
+  color: var(--ink-2); font-size: 10.5px; font-weight: 600; letter-spacing: .01em;
 }
+.tab > svg, .tab > .tab-label { position: relative; z-index: 1; transition: transform .15s var(--ease-snappy); }
+.tab:active > svg { transform: scale(.88); }
 .tab[aria-current="page"] { color: var(--pool); }
+.tab-pill { position: absolute; inset: 0; border-radius: 26px; background: color-mix(in srgb, var(--pool) 15%, transparent); view-transition-name: tab-pill; }
+::view-transition-group(tab-pill) { animation-duration: var(--dur-snappy); animation-timing-function: var(--ease-snappy); }
+
+/* Workout in progress, floating above the tab bar on every tab. */
+.resume-pill {
+  position: fixed; z-index: 29; left: 0; right: 0; margin: 0 auto; bottom: calc(var(--tabbar-gap) + var(--tabbar-h) + 10px);
+  width: min(calc(100% - 28px), 420px); min-height: 52px; padding: 7px 8px 7px 16px;
+  display: flex; align-items: center; gap: 10px; border: 0; border-radius: 26px; cursor: pointer; text-align: left;
+  background: color-mix(in srgb, var(--ink) 94%, transparent); color: var(--bg);
+  box-shadow: var(--glass-shadow); view-transition-name: resume-pill;
+  animation: rise-in var(--dur-bouncy) var(--ease-bouncy) backwards;
+}
+.resume-pill .rp-name { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume-pill .rp-time { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-lg); opacity: .8; font-variant-numeric: tabular-nums; }
+.resume-pill .rp-go { padding: 8px 14px; border-radius: 999px; background: var(--good); color: var(--on-accent); font-weight: 700; font-size: var(--fs-sm); }
+@keyframes rise-in { from { transform: translateY(16px); opacity: 0; } }
 
 /* ---------- glass ---------- */
 .glass {
@@ -552,6 +574,19 @@ html.reduce-transparency .dialog { background: var(--surface); -webkit-backdrop-
 @keyframes drop { from { transform: translateY(-12px); opacity: 0; } }
 
 /* ---------- library & learn ---------- */
+.tile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile {
+  display: flex; flex-direction: column; gap: 4px; padding: 0 0 12px; overflow: hidden; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: inherit;
+  transition: transform .15s var(--ease-snappy);
+}
+.tile:active { transform: scale(.97); }
+.tile-img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--surface-2); margin-bottom: 6px; }
+.tile-img.wide { aspect-ratio: 16 / 9; }
+.tile-ph { display: grid; place-items: center; color: var(--iron); background: var(--iron-wash); }
+.tile-ph.swim { color: var(--pool); background: var(--pool-wash); }
+.tile-name { padding: 0 12px; font-weight: 700; line-height: 1.2; }
+.tile-sub { padding: 0 12px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
 .search { position: relative; }
 .search .input { padding-left: 40px; }
 .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }

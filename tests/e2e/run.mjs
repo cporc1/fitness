@@ -12,6 +12,12 @@ const gymSession = (id, date, tpl, exercises) => ({
 });
 
 const btn = (page, name) => page.getByRole('button', { name }).first();
+const closeSheet = (page) => page.locator('.sheet').last().getByRole('button', { name: 'Close' }).click();
+async function openSettings(page) {
+  await tabTo(page, 'Today');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('.topbar .title', { hasText: 'Settings' }).waitFor();
+}
 /** Switch tab and land on its root page (tabs remember their pages, so tap again if needed). */
 async function tabTo(page, name) {
   const bar = page.locator('.tabbar');
@@ -44,14 +50,14 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   await shot(page, 'today-combo');
 
   await page.locator('.hero-link').first().click();
-  await page.locator('.demo').first().waitFor();
-  check('Exercise details have two demo photos', (await page.locator('.demo img').count()) === 2);
-  check('Exercise details have "Find it in the gym"', (await page.locator('.find-card').count()) === 1);
-  check('Exercise details have a video poster', (await page.locator('.video-poster').count()) === 1);
+  await page.locator('.sheet .demo').first().waitFor();
+  check('Exercise sheet has two demo photos', (await page.locator('.sheet .demo img').count()) === 2);
+  check('Exercise sheet has "Find it in the gym"', (await page.locator('.sheet .find-card').count()) === 1);
+  check('Exercise sheet has a video poster', (await page.locator('.sheet .video-poster').count()) === 1);
   check('No links leave the app', (await page.locator('a[target=_blank]').count()) === 0);
-  await page.locator('.video-poster').click();
-  check('Video turns into an inline player', (await page.locator('.video iframe').count()) === 1);
-  await btn(page, 'Back').click();
+  await page.locator('.sheet .video-poster').click();
+  check('Video turns into an inline player', (await page.locator('.sheet .video iframe').count()) === 1);
+  await closeSheet(page);
 
   await page.locator('.hero.gym').getByRole('button', { name: 'Start workout' }).click();
   await page.locator('.ex-card').first().waitFor();
@@ -77,7 +83,7 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   await page.getByText('Done today').waitFor();
   check('Both done shows "Done today"', (await page.getByText('Done today').count()) === 1);
 
-  await tabTo(page, 'More');
+  await openSettings(page);
   await page.locator('.list-item', { hasText: 'Backup & data' }).click();
   await btn(page, 'Delete all data').click();
   await btn(page, 'Delete everything').click();
@@ -96,29 +102,39 @@ test('plan, library, settings', async ({ newPage, open, check, shot }) => {
   check('Friday becomes Gym + Swim', (await page.locator('.list-item', { hasText: 'Friday' }).locator('.chip.both').count()) === 1);
   await page.locator('.list-item', { hasText: 'Upper Body' }).click();
   await page.locator('.list-item').first().click();
-  check('A plan exercise opens its details', (await page.locator('.find-card').count()) === 1);
+  await page.locator('.sheet .find-card').waitFor();
+  check('A plan exercise opens its details in a sheet', (await page.locator('.sheet .find-card').count()) === 1);
   await shot(page, 'plan-exercise');
-  await btn(page, 'Back').click();
+  await closeSheet(page);
   await btn(page, 'Back').click();
 
-  await tabTo(page, 'More');
-  await page.locator('.list-item', { hasText: 'Exercise library' }).click();
-  await page.fill('#lib-search', 'gravitron');
-  check('Search by other name finds Assisted Pull-Up', (await page.locator('.list-item', { hasText: 'Assisted Pull-Up' }).count()) === 1);
-  await btn(page, 'Back').click();
+  await tabTo(page, 'Learn');
+  await page.fill('#learn-search', 'gravitron');
+  check('Search by other name finds Assisted Pull-Up', (await page.locator('.tile', { hasText: 'Assisted Pull-Up' }).count()) === 1);
+  await page.locator('.tile', { hasText: 'Assisted Pull-Up' }).click();
+  await page.locator('.sheet .find-card').waitFor();
+  check('Learn opens exercises in a sheet', true);
+  await closeSheet(page);
+  await page.fill('#learn-search', '');
+  await shot(page, 'learn');
+
+  await openSettings(page);
   check('Habits hidden by default', (await page.locator('.list-item', { hasText: 'Habits' }).count()) === 0);
-  await page.locator('.list-item', { hasText: 'Settings' }).click();
-  await page.locator('.seg button', { hasText: 'Simple' }).click();
   await page.locator('#st-trackBody').check();
+  await page.locator('.list-item', { hasText: 'Habits' }).waitFor();
+  check('Habits and Body log appear once tracking is on', (await page.locator('.list-item', { hasText: 'Body log' }).count()) === 1);
+  await shot(page, 'settings');
   await btn(page, 'Back').click();
-  await tabTo(page, 'Today');
+  await page.getByText('Daily check-in').waitFor();
   check('Check-in shows once body tracking is on', (await page.getByText('Daily check-in').count()) === 1);
   await tabTo(page, 'Plan');
+  await page.locator('.list-item', { hasText: 'Swim workouts' }).click();
+  await page.locator('.sheet .choice', { hasText: 'Simple' }).click();
   await page.locator('.list-item', { hasText: /Easy Swim|Endurance/ }).first().click();
   check('Simple swim mode has no drills', (await page.locator('.swim-item', { hasText: /drill/i }).count()) === 0);
   await btn(page, 'Back').click();
 
-  for (const t of ['Today', 'Plan', 'Log', 'Progress', 'More']) {
+  for (const t of ['Today', 'Plan', 'Progress', 'Learn']) {
     await tabTo(page, t);
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     check(`No sideways scrolling on ${t}`, over <= 0, `${over}px`);
@@ -133,9 +149,11 @@ test('resume after reload; 50 m pool swim', async ({ newPage, open, check }) => 
   await page.locator('.ex-card').first().locator('.set-input').nth(1).fill('11');
   await page.waitForTimeout(400); // typed values save after a short pause
   await page.reload();
-  await page.locator('.resume-bar').waitFor();
-  check('Resume bar after reload', (await page.locator('.resume-bar').count()) === 1);
-  await page.locator('.resume-bar').click();
+  await page.locator('.resume-pill').waitFor();
+  check('Resume pill after reload', (await page.locator('.resume-pill').count()) === 1);
+  await tabTo(page, 'Learn');
+  check('Resume pill floats on other tabs too', (await page.locator('.resume-pill').count()) === 1);
+  await page.locator('.resume-pill').click();
   const v = await page.locator('.ex-card').first().locator('.set-input').nth(0).inputValue();
   check('Typed weight survives reload', v === '77.5', v);
   await page.locator('.session-head').getByRole('button', { name: 'Minimize workout' }).click();
@@ -154,8 +172,7 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
     'sessions-2026-09': { items: [gymSession('a1', '2026-09-28', 'p1-a', [['leg-press', [[100, 12], [100, 12], [100, 11]]], ['lateral-raise', [[10, 20], [10, 20]]]])] },
     'sessions-2026-10': { items: [gymSession('a2', '2026-10-05', 'p1-a', [['leg-press', [[100, 15], [100, 15], [100, 15]]], ['lateral-raise', [[10, 20], [10, 20]]]])] },
   });
-  await tabTo(page, 'More');
-  await page.locator('.list-item', { hasText: 'Settings' }).click();
+  await openSettings(page);
   await page.locator('.seg button', { hasText: 'kg' }).click();
   await tabTo(page, 'Progress');
   const e1 = await page.locator('.kv .v').first().textContent();
@@ -169,7 +186,7 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   check('Lateral raise uses a real dumbbell size in kg', ['4.5', '5', '6'].includes(lr), lr);
   await page.locator('.session-head').getByRole('button', { name: 'Minimize workout' }).click();
 
-  await tabTo(page, 'More');
+  await openSettings(page);
   await page.locator('.list-item', { hasText: 'Backup & data' }).click();
   const dlP = page.waitForEvent('download');
   await btn(page, 'Export backup').click();
@@ -178,7 +195,7 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   const before = Object.fromEntries(Object.entries(JSON.parse(fs.readFileSync(file, 'utf8')).docs).map(([k, v]) => [PREFIX + k, JSON.stringify(v)]));
   const page2 = await newPage();
   await open(page2, { profile: { onboarded: true, units: 'lb', startDate: '2026-10-01' } });
-  await tabTo(page2, 'More');
+  await openSettings(page2);
   await page2.locator('.list-item', { hasText: 'Backup & data' }).click();
   await page2.setInputFiles('#restore-file', file);
   await page2.locator('.dialog').getByRole('button', { name: 'Restore', exact: true }).click();
@@ -212,14 +229,21 @@ test('navigation: back, swipe-back, forward, tab stacks, scroll', async ({ newPa
   await item.click();
   await btn(page, 'Start this workout').waitFor();
   await page.locator('.list-item').first().click();
-  await page.locator('.find-card').waitFor();
-  check('Two pages deep = two history entries', (await ll()) === 2, String(await ll()));
-  await page.goBack(); // what the iPhone edge swipe does
-  await btn(page, 'Start this workout').waitFor();
-  check('Swipe-back returns to the workout page', (await ll()) === 1);
+  await page.locator('.sheet .find-card').waitFor();
+  check('A sheet is not a history entry', (await ll()) === 1, String(await ll()));
+  await closeSheet(page);
+
   await page.locator('.tabbar').getByRole('button', { name: 'Today' }).click();
   await page.locator('.greet').waitFor();
   check('Switching tab unwinds history', (await ll()) === 0, String(await ll()));
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.locator('.list-item', { hasText: 'Backup & data' }).click();
+  await page.getByRole('button', { name: 'Export backup' }).waitFor();
+  check('Two pages deep = two history entries', (await ll()) === 2, String(await ll()));
+  await page.goBack(); // what the iPhone edge swipe does
+  await page.locator('.topbar .title', { hasText: 'Settings' }).waitFor();
+  check('Swipe-back returns one page', (await ll()) === 1);
+
   await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
   await btn(page, 'Start this workout').waitFor();
   check('Plan remembers its open page', (await ll()) === 1, String(await ll()));
@@ -234,6 +258,9 @@ test('navigation: back, swipe-back, forward, tab stacks, scroll', async ({ newPa
   await btn(page, 'Back').click();
   await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
   check('Back button pops through history', (await ll()) === 0);
+  await page.locator('.tabbar').getByRole('button', { name: 'Today' }).click();
+  await page.locator('.topbar .title', { hasText: 'Settings' }).waitFor();
+  check('Today remembers Settings was open', (await ll()) === 1);
 });
 
 test('screen changes animate unless motion is reduced', async ({ newPage, open, check }) => {

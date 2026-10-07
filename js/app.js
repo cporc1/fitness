@@ -1,7 +1,7 @@
 // App shell: state access, navigation and rendering.
 
 import * as store from './store.js';
-import { h, icon, ICONS } from './util.js';
+import { h, icon, ICONS, fmtClock } from './util.js';
 import { configure as configureTimer, keepAwake, unlockAudio } from './timer.js';
 import { setCustomExercises } from './data/exercises.js';
 import { initRouter, activeTab, current, scrollFor, go, back, replace, tab, resetNav } from './router.js';
@@ -12,9 +12,8 @@ export { current, go, back, replace, tab, resetNav };
 const TABS = [
   { id: 'today', label: 'Today', icon: ICONS.today },
   { id: 'plan', label: 'Plan', icon: ICONS.plan },
-  { id: 'log', label: 'Log', icon: ICONS.log },
   { id: 'progress', label: 'Progress', icon: ICONS.progress },
-  { id: 'more', label: 'More', icon: ICONS.more },
+  { id: 'learn', label: 'Learn', icon: ICONS.book },
 ];
 
 const routes = {};
@@ -42,11 +41,26 @@ export function ctx() {
 }
 
 function tabBar(active) {
-  return h('nav', { class: 'tabbar', 'aria-label': 'Main' },
+  return h('nav', { class: 'tabbar glass', 'aria-label': 'Main' },
     TABS.map((t) => h('button', {
       class: 'tab', type: 'button', 'aria-current': t.id === active ? 'page' : 'false',
       onclick: () => tab(t.id),
-    }, icon(t.icon, 24), t.label)));
+    },
+    t.id === active ? h('span', { class: 'tab-pill', 'aria-hidden': 'true' }) : null,
+    icon(t.icon, 24), h('span', { class: 'tab-label' }, t.label))));
+}
+
+/** "Workout in progress" pill floating above the tab bar on every tab. */
+function resumePill(active) {
+  const time = h('span', { class: 'rp-time' });
+  const tick = () => { time.textContent = fmtClock((Date.now() - new Date(active.startedAt)) / 1000); };
+  tick();
+  const el = h('button', {
+    class: 'resume-pill', type: 'button', 'aria-label': `Resume ${active.name}`,
+    onclick: () => go(active.kind === 'swim' ? 'swim-session' : 'session'),
+  }, h('span', { class: 'pulse' }), h('span', { class: 'rp-name' }, active.name), time, h('span', { class: 'rp-go' }, 'Resume'));
+  const id = setInterval(() => { if (!el.isConnected) clearInterval(id); else tick(); }, 1000);
+  return el;
 }
 
 export function render(opts = {}) {
@@ -69,7 +83,9 @@ export function render(opts = {}) {
 
     keepAwake(!!state.active && state.settings?.wakeLock !== false && (route.name === 'session' || route.name === 'swim-session'));
 
-    appEl.replaceChildren(viewEl, fullScreen ? '' : tabBar(activeTab()));
+    const showResume = !fullScreen && !!state.active && state.profile?.onboarded;
+    appEl.classList.toggle('has-resume', showResume);
+    appEl.replaceChildren(viewEl, ...(fullScreen ? [] : [showResume ? resumePill(state.active) : '', tabBar(activeTab())]));
     if (opts.scrollTop) window.scrollTo(0, 0);
     else if (opts.restoreScroll) window.scrollTo(0, scrollFor(route));
   } finally {

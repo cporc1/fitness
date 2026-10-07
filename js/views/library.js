@@ -2,14 +2,14 @@
 
 import * as store from '../store.js';
 import { h, icon, ICONS, fmtDate, fmtNum, uid, put, fill } from '../util.js';
-import { ctx, go, back, registerRoute, render } from '../app.js';
-import { EXERCISES, GROUPS, getExercise, allExercises } from '../data/exercises.js';
-import { DRILLS, STROKE_GUIDES, getDrill } from '../data/swim.js';
+import { ctx } from '../app.js';
+import { GROUPS, getExercise, allExercises } from '../data/exercises.js';
+import { getDrill } from '../data/swim.js';
 import { framesFor } from '../data/media.js';
 import { demoMedia, demoVideo } from '../media.js';
 import { exerciseHistory, exerciseRecords } from '../stats.js';
 import { lineChart } from '../charts.js';
-import { topbar, listItem, sheet, input, field, select, toast, segmented } from '../ui.js';
+import { listItem, sheet, input, field, select, toast, confirmDialog } from '../ui.js';
 
 const TYPE_LABEL = {
   weight: 'Weight × reps', bodyweight: 'Bodyweight reps', assisted: 'Assisted (assistance × reps)',
@@ -94,7 +94,16 @@ export function exThumb(exId) {
 
 export function openExerciseSheet(exId) {
   const def = getExercise(exId);
-  sheet(def?.name || 'Exercise', exerciseInfo(exId, { compact: true }));
+  sheet(def?.name || 'Exercise', (close) => h('div', { class: 'stack lg' },
+    exerciseInfo(exId, { compact: true }),
+    def?.custom ? h('button', {
+      class: 'btn ghost', onclick: async () => {
+        const ok = await confirmDialog({ title: `Delete ${def.name}?`, message: 'Workouts you already logged keep it.', confirm: 'Delete', danger: true });
+        if (!ok) return;
+        store.update('custom', (c) => { c.exercises = c.exercises.filter((x) => x.id !== exId); return c; });
+        close();
+      },
+    }, icon(ICONS.trash, 18), 'Delete this exercise') : null));
 }
 
 export function drillInfo(drillId) {
@@ -132,7 +141,7 @@ export function exercisePicker({ title = 'Add exercise', suggested = [], onPick 
       sub: `${suggested.includes(e.id) && !q ? 'Suggested · ' : ''}${e.group} · ${e.equipment}`,
       onclick: () => onPick(e.id),
       trailing: icon(ICONS.plus, 18),
-    })) : h('div', { class: 'list-item muted' }, 'No matches. Create a custom exercise in More → Exercise library.')));
+    })) : h('div', { class: 'list-item muted' }, 'No matches. Add your own exercise in Learn with the + button.')));
   };
   const search = input({ id: 'ex-search', type: 'search', placeholder: 'Search exercises', oninput: (e) => { query = e.target.value; renderList(); } });
   const filters = h('div', { class: 'filter-row' }, ['All', ...GROUPS].map((g) => h('button', {
@@ -148,7 +157,7 @@ export function exercisePicker({ title = 'Add exercise', suggested = [], onPick 
     h('div', { class: 'search' }, icon(ICONS.search, 18), search), filters, listWrap));
 }
 
-function openCustomExerciseForm() {
+export function openCustomExerciseForm() {
   const name = input({ id: 'cx-name', placeholder: 'e.g. Hack Squat', autocapitalize: 'words' });
   const group = select(GROUPS.map((g) => ({ value: g, label: g })), 'Legs', { id: 'cx-group' });
   const type = select(Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label })), 'weight', { id: 'cx-type' });
@@ -173,74 +182,3 @@ function openCustomExerciseForm() {
       },
     }, 'Save exercise')));
 }
-
-// ---------------- routes ----------------
-
-const libState = { tab: 'gym', group: 'All', query: '' };
-
-registerRoute('library', () => {
-  const view = h('div', { class: 'view' });
-  const listWrap = h('div', { class: 'card flush' });
-  const renderList = () => {
-    const q = libState.query.trim().toLowerCase();
-    if (libState.tab === 'swim') {
-      const match = (d) => !q || d.name.toLowerCase().includes(q) || d.purpose.toLowerCase().includes(q);
-      const row = (d) => listItem({ title: d.name, sub: d.purpose, onclick: () => go('drill', { id: d.id }) });
-      const strokes = STROKE_GUIDES.filter(match);
-      const drills = DRILLS.filter(match);
-      fill(listWrap,
-        strokes.length ? h('div', { class: 'eyebrow', style: { padding: '14px 16px 0' } }, 'Strokes') : null,
-        strokes.length ? h('div', { class: 'list' }, strokes.map(row)) : null,
-        drills.length ? h('div', { class: 'eyebrow', style: { padding: '14px 16px 0', borderTop: strokes.length ? '1px solid var(--line)' : 0 } }, 'Drills and skills') : null,
-        drills.length ? h('div', { class: 'list' }, drills.map(row)) : null,
-        !strokes.length && !drills.length ? h('div', { class: 'list-item muted' }, 'No matches.') : null);
-      return;
-    }
-    const items = allExercises().filter((e) => (libState.group === 'All' || e.group === libState.group) && exerciseMatches(e, q));
-    fill(listWrap, h('div', { class: 'list' }, items.length
-      ? items.map((e) => listItem({ title: e.name, sub: `${e.muscles} · ${e.equipment}`, leading: exThumb(e.id), onclick: () => go('exercise', { id: e.id }) }))
-      : h('div', { class: 'list-item muted' }, 'No matches.')));
-  };
-  const search = input({ id: 'lib-search', type: 'search', placeholder: libState.tab === 'swim' ? 'Search drills' : 'Search exercises', value: libState.query, oninput: (e) => { libState.query = e.target.value; renderList(); } });
-  const filters = h('div', { class: 'filter-row', hidden: libState.tab === 'swim' }, ['All', ...GROUPS].map((g) => h('button', {
-    type: 'button', 'aria-pressed': String(g === libState.group),
-    onclick: (e) => {
-      libState.group = g;
-      for (const b of filters.children) b.setAttribute('aria-pressed', String(b === e.currentTarget));
-      renderList();
-    },
-  }, g)));
-  renderList();
-  put(view, 
-    topbar({ title: 'Library', onBack: back, actions: [h('button', { class: 'icon-btn', 'aria-label': 'New exercise', onclick: openCustomExerciseForm }, icon(ICONS.plus))] }),
-    segmented([{ value: 'gym', label: `Gym (${EXERCISES.length})` }, { value: 'swim', label: `Swim (${STROKE_GUIDES.length + DRILLS.length})` }], libState.tab, (v) => { libState.tab = v; libState.query = ''; render(); }, 'Library section'),
-    h('div', { class: 'search' }, icon(ICONS.search, 18), search),
-    filters,
-    listWrap);
-  return view;
-});
-
-registerRoute('exercise', ({ id }) => {
-  const def = getExercise(id);
-  const view = h('div', { class: 'view' },
-    topbar({ title: '', onBack: back }),
-    h('div', { class: 'page-head' }, h('div', { class: 'eyebrow' }, TYPE_LABEL[def?.type] || ''), h('h1', null, def?.name || 'Exercise')),
-    exerciseInfo(id));
-  if (def?.custom) {
-    put(view, h('button', {
-      class: 'btn ghost', onclick: () => {
-        store.update('custom', (c) => { c.exercises = c.exercises.filter((x) => x.id !== id); return c; });
-        back();
-      },
-    }, icon(ICONS.trash, 18), 'Delete custom exercise'));
-  }
-  return view;
-});
-
-registerRoute('drill', ({ id }) => {
-  const d = getDrill(id);
-  return h('div', { class: 'view' },
-    topbar({ title: '', onBack: back }),
-    h('div', { class: 'page-head' }, h('div', { class: 'eyebrow' }, d?.kind === 'stroke' ? 'Swim stroke' : 'Swim drill'), h('h1', null, d?.name || 'Drill')),
-    drillInfo(id));
-});

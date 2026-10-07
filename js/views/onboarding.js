@@ -19,10 +19,16 @@ const POOLS = [
 
 const DEFAULT_PICKS = { 2: [0, 3], 3: [0, 2, 4], 4: [0, 1, 3, 5], 5: [0, 1, 2, 4, 5], 6: [0, 1, 2, 3, 4, 5] };
 
-const draft = {
-  step: 0, name: '', units: 'lb', goal: 'health', pool: POOLS[0], swimLevel: 'novice',
+const freshDraft = () => ({
+  step: 0, name: '', units: 'lb', goal: 'health', pool: POOLS[0], swimLevel: 'novice', swimMode: 'full',
   days: [...DEFAULT_PICKS[4]], kinds: null,
-};
+});
+const draft = freshDraft();
+
+/** Forget anything typed during setup, so a later reset starts at step 1. */
+export function resetOnboarding() {
+  Object.assign(draft, freshDraft());
+}
 
 function assignKinds(days) {
   const sorted = [...days].sort((a, b) => a - b);
@@ -46,6 +52,8 @@ function finish() {
     pool: { len: draft.pool.len, unit: draft.pool.unit }, swimLevel: draft.swimLevel,
     startDate: todayISO(), onboarded: true, createdAt: new Date().toISOString(),
   });
+  store.update('settings', (x) => ({ ...x, swimMode: draft.swimMode }));
+  resetOnboarding();
 }
 
 function stepWelcome() {
@@ -86,6 +94,12 @@ function stepPool() {
     h('div', { class: 'field' },
       h('span', { class: 'label' }, 'Swimming right now'),
       h('div', { class: 'choice-grid' }, SWIM_LEVELS.map((l) => choice(l.name, l.desc, draft.swimLevel === l.id, () => { draft.swimLevel = l.id; render(); })))),
+    draft.swimLevel !== 'learner' ? h('div', { class: 'field' },
+      h('span', { class: 'label' }, 'Swim workouts'),
+      h('div', { class: 'choice-grid' },
+        choice('Simple', 'Just freestyle, breaststroke and a kickboard. No technique drills.', draft.swimMode === 'simple', () => { draft.swimMode = 'simple'; render(); }),
+        choice('With technique drills', 'Adds short drills that improve your stroke faster. Each one has a how-to video.', draft.swimMode === 'full', () => { draft.swimMode = 'full'; render(); })),
+      h('div', { class: 'hint' }, 'You can switch any time in Settings.')) : null,
     draft.swimLevel === 'learner'
       ? h('div', { class: 'callout warn' }, 'Your swim sessions stay in the shallow end and build water confidence. Swim only when a lifeguard is on duty, and consider a few adult lessons. They speed things up a lot.')
       : null,

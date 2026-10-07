@@ -101,8 +101,11 @@ export function planCard(state, dateIso) {
     h('ul', { class: 'hero-list' }, exs.map((item) => {
       const def = getExercise(swaps[item.ex] || item.ex);
       const w = def?.type === 'time' ? 's' : '';
-      return h('li', null, h('span', { class: 't' }, def?.name || item.ex), h('span', { class: 'v' }, `${item.sets} × ${item.reps[0]}–${item.reps[1]}${w}`));
+      return h('li', null, h('button', { class: 'hero-link', type: 'button', onclick: () => go('exercise', { id: def?.id || item.ex }) },
+        h('span', { class: 't' }, def?.name || item.ex),
+        h('span', { class: 'v' }, `${item.sets} × ${item.reps[0]}–${item.reps[1]}${w}`, icon(ICONS.chevron, 14))));
     })),
+    h('div', { class: 'xs muted' }, 'Tap an exercise to see how to do it.'),
     ups ? h('div', { class: 'small c-good', style: { fontWeight: 600 } }, `Ready to add weight on ${ups} ${ups === 1 ? 'exercise' : 'exercises'}`) : null,
     isToday ? h('button', { class: 'btn iron lg block', onclick: () => startGym(t) }, icon(ICONS.play, 20), 'Start workout') : null);
 }

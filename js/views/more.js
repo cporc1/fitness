@@ -2,7 +2,9 @@
 
 import * as store from '../store.js';
 import { h, icon, ICONS, todayISO, addDays, fmtDate, fmtNum, toNumber, parseClock, KG_PER_LB, put, fill } from '../util.js';
-import { ctx, go, back, registerRoute, render } from '../app.js';
+import { ctx, go, back, tab, registerRoute, render } from '../app.js';
+import { resetOnboarding } from './onboarding.js';
+import { stopRest } from '../timer.js';
 import { GUIDES } from '../data/guides.js';
 import { e1rm, platesPerSide, DEFAULT_PLATES, DEFAULT_BAR, nutritionTargets, ACTIVITY, pacePer100 } from '../stats.js';
 import { pageHead, topbar, listItem, segmented, input, field, select, confirmDialog, toast, sheet } from '../ui.js';
@@ -26,7 +28,7 @@ registerRoute('more', (_p, state) => {
       listItem({ title: 'Habits', sub: 'Water, sleep and protein history', leading: icon(ICONS.drop), onclick: () => go('habits') }))),
     h('div', { class: 'card flush' }, h('div', { class: 'list' },
       listItem({ title: 'Settings', sub: 'Units, pool, rest timer, theme', leading: icon(ICONS.gear), onclick: () => go('settings') }),
-      listItem({ title: 'Backup & data', sub: syncLine, leading: icon(ICONS.download), onclick: () => go('data') }),
+      listItem({ title: 'Backup & data', sub: `${syncLine} · backup, restore, start over`, leading: icon(ICONS.download), onclick: () => go('data') }),
       listItem({ title: 'Install on iPhone', sub: 'Add to your Home Screen', leading: icon(ICONS.upload), onclick: () => go('install') }))),
     h('p', { class: 'xs muted', style: { textAlign: 'center' } }, 'Lift & Lap · general fitness guidance, not medical advice.'));
 });
@@ -244,7 +246,10 @@ registerRoute('settings', (_p, state) => {
         segmented(POOL_OPTIONS.map((o) => ({ value: o.key, label: o.label })), poolKey, (v) => {
           const o = POOL_OPTIONS.find((x) => x.key === v);
           setProfile({ pool: { len: o.len, unit: o.unit } });
-        }, 'Pool length'))),
+        }, 'Pool length')),
+      h('div', { class: 'field' }, h('span', { class: 'label' }, 'Swim workouts'),
+        segmented([{ value: 'simple', label: 'Simple' }, { value: 'full', label: 'With drills' }], st.swimMode || 'full', (v) => setSettings({ swimMode: v }), 'Swim workout style'),
+        h('span', { class: 'hint' }, 'Simple: just freestyle, breaststroke and kickboard. With drills: adds technique drills.'))),
     h('div', { class: 'card' },
       h('strong', null, 'Rest timer'),
       h('div', { class: 'field-row' }, field('Big lifts (s)', restC), field('Small lifts (s)', restI)),
@@ -327,13 +332,16 @@ registerRoute('data', (_p, state) => {
     fileInput,
     h('div', { class: 'card' },
       h('strong', { class: 'c-danger' }, 'Start over'),
-      h('p', { class: 'small ink-2' }, 'Delete all workouts, settings and history from this app. Export a backup first if you might want it back.'),
+      h('p', { class: 'small ink-2' }, 'Finished a test run, or want a clean slate? This deletes every workout, measurement and setting on this device and takes you back to setup. Export a backup first if you might want it back.'),
       h('button', {
         class: 'btn danger', onclick: async () => {
-          const ok = await confirmDialog({ title: 'Delete everything?', message: 'All workouts, body entries and settings will be erased. This cannot be undone.', confirm: 'Delete everything', danger: true });
+          const ok = await confirmDialog({ title: 'Delete everything?', message: 'All workouts, body entries and settings will be erased and setup will start again. This cannot be undone.', confirm: 'Delete everything', danger: true });
           if (!ok) return;
+          stopRest();
+          resetOnboarding();
           store.resetAll();
-          toast('All data deleted');
+          tab('today');
+          toast('All data deleted. Set up again whenever you are ready.');
         },
       }, 'Delete all data')));
 });

@@ -152,7 +152,8 @@ export function openStartPicker() {
   const state = ctx();
   const phase = currentPhase(state.profile);
   const nextGym = nextGymTemplate(state.sessions, phase.id);
-  const nextSwim = nextSwimWorkout(state.sessions, state.profile?.swimLevel, phase.id);
+  const swimMode = state.settings?.swimMode || 'full';
+  const nextSwim = nextSwimWorkout(state.sessions, state.profile?.swimLevel, phase.id, swimMode);
   const poolLen = state.profile?.pool?.len || 25;
   const unitD = state.profile?.pool?.unit || 'yd';
   sheet('Start a workout', (close) => {
@@ -165,7 +166,7 @@ export function openStartPicker() {
       onclick: pickGym(t),
     }));
     const swimItems = swimTemplateKeys(state.profile?.swimLevel || 'novice', phase.id).map((k) => {
-      const w = getSwimWorkout(k);
+      const w = getSwimWorkout(k, swimMode);
       const dist = workoutDistance(expandForPool(w.blocks, poolLen));
       return listItem({
         title: `${w.name}${w.id === nextSwim?.id ? ' · up next' : ''}`,

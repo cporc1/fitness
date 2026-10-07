@@ -50,11 +50,11 @@ export function nextGymTemplate(sessions, phaseId) {
 }
 
 /** Next swim workout: alternates technique / endurance. */
-export function nextSwimWorkout(sessions, level, phaseId) {
+export function nextSwimWorkout(sessions, level, phaseId, mode = 'full') {
   const [tech, endure] = swimTemplateKeys(level || 'novice', phaseId);
   const last = sessions.find(isProgramSwim);
   const lastWasTech = last ? last.templateId.endsWith('-tech') : false;
-  return getSwimWorkout(lastWasTech ? endure : tech);
+  return getSwimWorkout(lastWasTech ? endure : tech, mode);
 }
 
 /**
@@ -85,10 +85,11 @@ export function planForDay(state, dateIso = todayISO()) {
     return { slot, phase, template: t, doneToday };
   }
   if (slot === 'swim') {
-    let w = nextSwimWorkout(sessions, profile?.swimLevel, phase.id);
+    const mode = state.settings?.swimMode || 'full';
+    let w = nextSwimWorkout(sessions, profile?.swimLevel, phase.id, mode);
     if (slotsAhead(state, slot, dateIso) % 2 === 1) {
       const [tech, endure] = swimTemplateKeys(profile?.swimLevel || 'novice', phase.id);
-      w = getSwimWorkout(w.key === tech ? endure : tech);
+      w = getSwimWorkout(w.key === tech ? endure : tech, mode);
     }
     return { slot, phase, template: w, doneToday };
   }
@@ -282,8 +283,8 @@ export function plannedSwimDistance(session) {
   return total;
 }
 
-export function templateById(id, custom) {
+export function templateById(id, custom, mode = 'full') {
   if (!id) return null;
-  if (id.startsWith('swim:')) return getSwimWorkout(id.slice(5));
+  if (id.startsWith('swim:')) return getSwimWorkout(id.slice(5), mode);
   return getGymTemplate(id) || custom?.templates?.find((t) => t.id === id) || null;
 }

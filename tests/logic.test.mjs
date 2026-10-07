@@ -191,3 +191,44 @@ test('service worker precaches every app file', async () => {
     assert.ok(sw.includes(`'${file}'`), `sw.js is missing ${file}`);
   }
 });
+
+test('simple swim mode keeps distance but removes drills', async () => {
+  const { getSwimWorkout, workoutDistance, guideForItem, getDrill } = await import('../js/data/swim.js');
+  for (const level of ['novice', 'comfortable']) {
+    for (const p of [1, 2, 3]) {
+      for (const k of ['tech', 'endure']) {
+        const key = `${level}-p${p}-${k}`;
+        const full = getSwimWorkout(key);
+        const simple = getSwimWorkout(key, 'simple');
+        assert.equal(workoutDistance(simple.blocks), workoutDistance(full.blocks), key);
+        for (const b of simple.blocks) {
+          for (const it of b.items) {
+            assert.ok(['Free', 'Breast', 'Kick'].includes(it.stroke), `${key}: ${it.stroke}`);
+            assert.ok(!it.drill || it.drill === 'kickboard', `${key}: drill ${it.drill}`);
+          }
+        }
+      }
+    }
+  }
+  // learner skills stay intact
+  assert.ok(getSwimWorkout('learner-p1-tech', 'simple').blocks.some((b) => b.items.some((it) => it.stroke === 'Skill')));
+  assert.equal(guideForItem({ stroke: 'Breast' }), 'stroke-breast');
+  assert.equal(guideForItem({ stroke: 'Drill', drill: 'catch-up' }), 'catch-up');
+  assert.ok(getDrill('stroke-free'));
+});
+
+test('demo media points at real exercises and files', async () => {
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  const { FRAMES, VIDEOS } = await import('../js/data/media.js');
+  const { getDrill } = await import('../js/data/swim.js');
+  for (const id of Object.keys(FRAMES)) {
+    assert.ok(getExercise(id), `frames for unknown exercise ${id}`);
+    for (const i of [0, 1]) assert.ok(fs.existsSync(path.join(root, `media/ex/${id}-${i}.jpg`)), `missing photo ${id}-${i}`);
+  }
+  for (const [id, v] of Object.entries(VIDEOS)) {
+    assert.ok(getExercise(id) || getDrill(id), `video for unknown id ${id}`);
+    assert.match(v.id, /^[A-Za-z0-9_-]{11}$/, `bad video id for ${id}`);
+  }
+});

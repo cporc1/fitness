@@ -1,10 +1,12 @@
 // Exercise & swim-drill library, plus the shared exercise detail content.
 
 import * as store from '../store.js';
-import { h, icon, ICONS, youtubeSearch, fmtDate, fmtNum, uid, put, fill } from '../util.js';
+import { h, icon, ICONS, fmtDate, fmtNum, uid, put, fill } from '../util.js';
 import { ctx, go, back, registerRoute, render } from '../app.js';
 import { EXERCISES, GROUPS, getExercise, allExercises } from '../data/exercises.js';
-import { DRILLS, getDrill } from '../data/swim.js';
+import { DRILLS, STROKE_GUIDES, getDrill } from '../data/swim.js';
+import { framesFor } from '../data/media.js';
+import { demoMedia, demoVideo } from '../media.js';
 import { exerciseHistory, exerciseRecords } from '../stats.js';
 import { lineChart } from '../charts.js';
 import { topbar, listItem, sheet, input, field, select, toast, segmented } from '../ui.js';
@@ -38,11 +40,11 @@ export function exerciseInfo(exId, { compact = false } = {}) {
       h('span', { class: 'chip plain' }, def.equipment),
       def.unilateral ? h('span', { class: 'chip plain' }, 'One side at a time') : null),
     h('p', { class: 'ink-2' }, h('strong', null, 'Works: '), def.muscles),
+    demoMedia(exId, def.name, `${def.name} exercise form tutorial`),
   ];
   if (def.steps?.length) parts.push(h('div', { class: 'section' }, h('div', { class: 'eyebrow' }, 'How to do it'), h('ol', { class: 'steps' }, def.steps.map((t) => h('li', null, t)))));
   if (def.cues?.length) parts.push(h('div', { class: 'callout' }, h('strong', null, 'Cues: '), def.cues.join(' · ')));
   if (def.mistakes?.length) parts.push(h('div', { class: 'callout warn' }, h('strong', null, 'Avoid: '), def.mistakes.join(' · ')));
-  parts.push(h('a', { class: 'btn ghost', href: youtubeSearch(`${def.name} exercise form tutorial`), target: '_blank', rel: 'noopener' }, icon(ICONS.external, 18), 'Watch demo videos'));
 
   if (hist.length) {
     const recRows = [];
@@ -66,6 +68,12 @@ export function exerciseInfo(exId, { compact = false } = {}) {
   return h('div', { class: 'stack lg' }, ...parts);
 }
 
+/** Small first-frame thumbnail for list rows (null when there's no photo). */
+export function exThumb(exId) {
+  const f = framesFor(exId);
+  return f ? h('img', { class: 'ex-thumb', src: f.srcs[0], alt: '', loading: 'lazy', decoding: 'async' }) : null;
+}
+
 export function openExerciseSheet(exId) {
   const def = getExercise(exId);
   sheet(def?.name || 'Exercise', exerciseInfo(exId, { compact: true }));
@@ -76,9 +84,9 @@ export function drillInfo(drillId) {
   if (!d) return h('p', { class: 'muted' }, 'Drill not found.');
   return h('div', { class: 'stack lg' },
     h('p', { class: 'ink-2' }, d.purpose),
+    demoVideo(drillId, d.kind === 'stroke' ? `${d.name} swimming technique for beginners` : `${d.name} swim drill`),
     h('div', { class: 'section' }, h('div', { class: 'eyebrow' }, 'How to do it'), h('ol', { class: 'steps' }, d.steps.map((t) => h('li', null, t)))),
-    h('div', { class: 'callout' }, h('strong', null, 'Focus on: '), d.cues.join(' · ')),
-    h('a', { class: 'btn ghost', href: youtubeSearch(`${d.name} swim drill`), target: '_blank', rel: 'noopener' }, icon(ICONS.external, 18), 'Watch demo videos'));
+    h('div', { class: 'callout' }, h('strong', null, 'Focus on: '), d.cues.join(' · ')));
 }
 
 export function openDrillSheet(drillId) {
@@ -158,14 +166,22 @@ registerRoute('library', () => {
   const renderList = () => {
     const q = libState.query.trim().toLowerCase();
     if (libState.tab === 'swim') {
-      const items = DRILLS.filter((d) => !q || d.name.toLowerCase().includes(q) || d.purpose.toLowerCase().includes(q));
-      fill(listWrap, h('div', { class: 'list' }, items.map((d) => listItem({ title: d.name, sub: d.purpose, onclick: () => go('drill', { id: d.id }) }))));
+      const match = (d) => !q || d.name.toLowerCase().includes(q) || d.purpose.toLowerCase().includes(q);
+      const row = (d) => listItem({ title: d.name, sub: d.purpose, onclick: () => go('drill', { id: d.id }) });
+      const strokes = STROKE_GUIDES.filter(match);
+      const drills = DRILLS.filter(match);
+      fill(listWrap,
+        strokes.length ? h('div', { class: 'eyebrow', style: { padding: '14px 16px 0' } }, 'Strokes') : null,
+        strokes.length ? h('div', { class: 'list' }, strokes.map(row)) : null,
+        drills.length ? h('div', { class: 'eyebrow', style: { padding: '14px 16px 0', borderTop: strokes.length ? '1px solid var(--line)' : 0 } }, 'Drills and skills') : null,
+        drills.length ? h('div', { class: 'list' }, drills.map(row)) : null,
+        !strokes.length && !drills.length ? h('div', { class: 'list-item muted' }, 'No matches.') : null);
       return;
     }
     const items = allExercises().filter((e) => (libState.group === 'All' || e.group === libState.group)
       && (!q || e.name.toLowerCase().includes(q) || e.muscles.toLowerCase().includes(q)));
     fill(listWrap, h('div', { class: 'list' }, items.length
-      ? items.map((e) => listItem({ title: e.name, sub: `${e.muscles} · ${e.equipment}`, onclick: () => go('exercise', { id: e.id }) }))
+      ? items.map((e) => listItem({ title: e.name, sub: `${e.muscles} · ${e.equipment}`, leading: exThumb(e.id), onclick: () => go('exercise', { id: e.id }) }))
       : h('div', { class: 'list-item muted' }, 'No matches.')));
   };
   const search = input({ id: 'lib-search', type: 'search', placeholder: libState.tab === 'swim' ? 'Search drills' : 'Search exercises', value: libState.query, oninput: (e) => { libState.query = e.target.value; renderList(); } });
@@ -180,7 +196,7 @@ registerRoute('library', () => {
   renderList();
   put(view, 
     topbar({ title: 'Library', onBack: back, actions: [h('button', { class: 'icon-btn', 'aria-label': 'New exercise', onclick: openCustomExerciseForm }, icon(ICONS.plus))] }),
-    segmented([{ value: 'gym', label: `Gym (${EXERCISES.length})` }, { value: 'swim', label: `Swim drills (${DRILLS.length})` }], libState.tab, (v) => { libState.tab = v; libState.query = ''; render(); }, 'Library section'),
+    segmented([{ value: 'gym', label: `Gym (${EXERCISES.length})` }, { value: 'swim', label: `Swim (${STROKE_GUIDES.length + DRILLS.length})` }], libState.tab, (v) => { libState.tab = v; libState.query = ''; render(); }, 'Library section'),
     h('div', { class: 'search' }, icon(ICONS.search, 18), search),
     filters,
     listWrap);
@@ -208,6 +224,6 @@ registerRoute('drill', ({ id }) => {
   const d = getDrill(id);
   return h('div', { class: 'view' },
     topbar({ title: '', onBack: back }),
-    h('div', { class: 'page-head' }, h('div', { class: 'eyebrow' }, 'Swim drill'), h('h1', null, d?.name || 'Drill')),
+    h('div', { class: 'page-head' }, h('div', { class: 'eyebrow' }, d?.kind === 'stroke' ? 'Swim stroke' : 'Swim drill'), h('h1', null, d?.name || 'Drill')),
     drillInfo(id));
 });

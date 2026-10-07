@@ -168,8 +168,68 @@ export const DRILLS = [
   },
 ];
 
-const DRILL_MAP = new Map(DRILLS.map((d) => [d.id, d]));
+// The swim strokes themselves, shown in Library → Swim and when you tap a set.
+export const STROKE_GUIDES = [
+  {
+    id: 'stroke-free', name: 'Freestyle (front crawl)', kind: 'stroke',
+    purpose: 'The fastest, most efficient stroke and the one most lap swimmers use.',
+    steps: [
+      'Float face down, looking at the bottom of the pool, body long and close to the surface.',
+      'Reach one arm forward, hand entering the water in line with your shoulder.',
+      'Bend your elbow and push the water back toward your feet, finishing past your hip.',
+      'Lift that arm out with a relaxed, bent elbow and swing it forward. Alternate arms.',
+      'Kick steadily from the hips with mostly straight legs and pointed toes.',
+      'Breathe by rolling your head to the side as an arm pulls back. Exhale underwater between breaths.',
+    ],
+    cues: ['Eyes down, hips up', 'Breathe out underwater, in when you turn', 'Long, relaxed strokes beat fast ones'],
+  },
+  {
+    id: 'stroke-free-breathing', name: 'Freestyle breathing', kind: 'stroke',
+    purpose: 'The skill that makes freestyle feel easy instead of exhausting.',
+    steps: [
+      'With your face in the water, breathe out steadily through your nose and mouth (bubbles).',
+      'As one arm pulls back, roll your head with your body until your mouth clears the water. Keep one goggle in the water.',
+      'Take a quick breath in through your mouth.',
+      'Roll your face back down as that arm comes forward, and start exhaling again.',
+      'Start by breathing every 2 strokes. Later, try every 3 strokes to alternate sides.',
+    ],
+    cues: ['Turn, don\'t lift your head', 'Never hold your breath underwater', 'Practice with bobs and side kick'],
+  },
+  {
+    id: 'stroke-breast', name: 'Breaststroke', kind: 'stroke',
+    purpose: 'A calm stroke where your head comes up every stroke. Great for easy laps and catching your breath.',
+    steps: [
+      'Start in a glide: arms straight in front, legs straight behind, face in the water.',
+      'Pull: sweep your hands out and back in a heart shape, then bring them together under your chin. Lift your head to breathe.',
+      'Kick: bring your heels toward your bottom, turn your feet out, and whip them around and together.',
+      'Shoot your arms forward and put your face back in the water.',
+      'Glide for a moment before the next stroke. The rhythm is: pull, breathe, kick, glide.',
+    ],
+    cues: ['Pull, breathe, kick, glide', 'Feet turned out on the kick', 'Don\'t rush: the glide is free speed'],
+  },
+  {
+    id: 'stroke-back', name: 'Backstroke', kind: 'stroke',
+    purpose: 'Your face stays out of the water, so breathing is easy. A good change of pace and recovery stroke.',
+    steps: [
+      'Float on your back, ears in the water, looking straight up. Hips near the surface.',
+      'Flutter kick steadily from the hips, knees staying under the water.',
+      'Lift one straight arm up out of the water, over your shoulder, and enter little finger first behind your head.',
+      'Pull that arm down through the water to your hip while the other arm comes over. Alternate.',
+      'Use the backstroke flags (5 m / 5 yd from the wall) to count strokes so you do not hit your head.',
+    ],
+    cues: ['Chin neutral, not tucked', 'Hips up', 'Count strokes from the flags to the wall'],
+  },
+];
+
+const DRILL_MAP = new Map([...DRILLS, ...STROKE_GUIDES].map((d) => [d.id, d]));
+/** A drill or a stroke guide by id. */
 export function getDrill(id) { return DRILL_MAP.get(id) || null; }
+
+/** The guide to show when someone taps a swim set: its drill, or its stroke. */
+export function guideForItem(item) {
+  if (item?.drill && DRILL_MAP.has(item.drill)) return item.drill;
+  return { Free: 'stroke-free', Breast: 'stroke-breast', Back: 'stroke-back', Kick: 'kickboard', Pull: 'pull-buoy', Choice: 'stroke-free' }[item?.stroke] || null;
+}
 
 // ---------------- workouts ----------------
 // key: `${level}-p${phase}-${kind}` with kind 'tech' | 'endure'
@@ -446,9 +506,46 @@ export function swimTemplateKeys(level, phaseId) {
   return [`${level}-p${phaseId}-tech`, `${level}-p${phaseId}-endure`];
 }
 
-export function getSwimWorkout(key) {
+/**
+ * mode 'simple' strips drills: every set becomes plain freestyle, breaststroke
+ * or kickboard kicking. Learn-to-swim skills (floating, bobs) stay as they are.
+ */
+export function getSwimWorkout(key, mode = 'full') {
   const w = SWIM_WORKOUTS[key];
-  return w ? { id: `swim:${key}`, key, ...w } : null;
+  if (!w) return null;
+  const workout = { id: `swim:${key}`, key, ...w };
+  return mode === 'simple' ? simplifyWorkout(workout) : workout;
+}
+
+export function simplifyItem(it) {
+  if (it.stroke === 'Skill') return { ...it };
+  if (it.stroke === 'Drill' || it.stroke === 'Pull') {
+    return { reps: it.reps, dist: it.dist, secs: it.secs, rest: it.rest, stroke: 'Free', note: 'Easy freestyle. Long, relaxed strokes.' };
+  }
+  if (it.stroke === 'Back' || it.stroke === 'Choice') {
+    return { reps: it.reps, dist: it.dist, secs: it.secs, rest: it.rest, stroke: 'Breast', note: 'Easy breaststroke (or freestyle if you prefer).' };
+  }
+  if (it.stroke === 'Kick') {
+    const { label, ...rest } = it;
+    return { ...rest, drill: it.dist ? 'kickboard' : it.drill, label: it.dist ? undefined : label };
+  }
+  const { drill, ...rest } = it; // plain freestyle/breaststroke: drop drill references
+  return rest;
+}
+
+export function simplifyWorkout(workout) {
+  const isLearner = workout.key?.startsWith('learner');
+  const blocks = (workout.blocks || []).map((b) => ({
+    name: b.name === 'Drills' ? 'Easy swim' : b.name,
+    items: b.items.map(simplifyItem),
+  }));
+  return {
+    ...workout,
+    name: isLearner ? workout.name : workout.name.replace('Technique', 'Easy Swim'),
+    blocks,
+    simple: true,
+    focus: isLearner ? workout.focus : 'Simple mode: just freestyle, breaststroke and kickboard. Swim smoothly and breathe out underwater.',
+  };
 }
 
 /**

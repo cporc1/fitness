@@ -101,11 +101,13 @@ test('plan, library, settings', async ({ newPage, open, check, shot }) => {
   await tabTo(page, 'Plan');
   await page.locator('.list-item', { hasText: 'Gym program' }).click();
   await page.locator('.sheet .choice', { hasText: 'Upper / lower' }).click();
-  check('Plan lists Upper Body and Lower Body', (await page.locator('.list-item', { hasText: 'Upper Body' }).count()) === 1 && (await page.locator('.list-item', { hasText: 'Lower Body' }).count()) === 1);
-  await page.locator('.list-item', { hasText: 'Friday' }).click();
+  check('Plan lists Upper Body and Lower Body', (await page.locator('.rot-card', { hasText: 'Upper Body' }).count()) === 1 && (await page.locator('.rot-card', { hasText: 'Lower Body' }).count()) === 1);
+  await page.locator('.day-chip[aria-label^="Friday"]').click();
   await page.locator('.sheet .list-item', { hasText: 'Gym + Swim' }).click();
-  check('Friday becomes Gym + Swim', (await page.locator('.list-item', { hasText: 'Friday' }).locator('.chip.both').count()) === 1);
-  await page.locator('.list-item', { hasText: 'Upper Body' }).click();
+  await page.locator('.day-chip.both[aria-label^="Friday"]').waitFor();
+  check('Friday becomes Gym + Swim', true);
+  check('One workout is marked up next per kind', (await page.locator('.rot-card .chip', { hasText: 'Up next' }).count()) === 2);
+  await page.locator('.rot-card', { hasText: 'Upper Body' }).click();
   await page.locator('.wk-hero').waitFor();
   check('Workout page shows the warm-up and cool-down rows', (await page.locator('.list-item', { hasText: 'Warm-up' }).count()) === 1 && (await page.locator('.list-item', { hasText: 'Cool-down' }).count()) === 1);
   await exerciseRow(page).click();
@@ -137,7 +139,7 @@ test('plan, library, settings', async ({ newPage, open, check, shot }) => {
   await tabTo(page, 'Plan');
   await page.locator('.list-item', { hasText: 'Swim workouts' }).click();
   await page.locator('.sheet .choice', { hasText: 'Simple' }).click();
-  await page.locator('.list-item', { hasText: /Easy Swim|Endurance/ }).first().click();
+  await page.locator('.rot-card', { hasText: /Easy Swim|Endurance/ }).first().click();
   await page.locator('.wk-hero.swim').waitFor();
   check('Simple swim mode has no drills', (await page.locator('.list-item', { hasText: /drill/i }).count()) === 0);
   await page.locator('.list-item', { hasText: 'Free' }).first().click();
@@ -190,7 +192,7 @@ test('kg conversion, backup round trip, plan complete', async ({ newPage, open, 
   const e1 = await page.locator('.kv .v').first().textContent();
   check('Progress converts to kg', /kg/.test(e1), e1);
   await tabTo(page, 'Plan');
-  await page.locator('.list-item', { hasText: 'Full Body A' }).click();
+  await page.locator('.rot-card', { hasText: 'Full Body A' }).click();
   await btn(page, 'Start workout').click();
   const lp = await page.locator('.ex-card').first().locator('.set-input').nth(0).inputValue();
   check('Leg press suggestion converts to kg (about 50)', Math.abs(Number(lp) - 50.5) <= 0.6, lp);
@@ -235,10 +237,9 @@ test('navigation: back, swipe-back, forward, tab stacks, scroll', async ({ newPa
   await open(page, { profile: PROFILE, schedule: WEEK });
   const ll = () => page.evaluate(() => history.state?.ll);
   await tabTo(page, 'Plan');
-  const item = page.locator('.list-item', { hasText: 'Full Body A' });
-  await item.scrollIntoViewIfNeeded();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const y0 = await page.evaluate(() => window.scrollY);
-  await item.click();
+  await page.locator('.rot-card', { hasText: 'Full Body A' }).evaluate((el) => el.click()); // tap without scrolling first
   await btn(page, 'Start workout').waitFor();
   await exerciseRow(page).click();
   await page.locator('.sheet .find-card').waitFor();
@@ -284,7 +285,7 @@ test('screen changes animate unless motion is reduced', async ({ newPage, open, 
   const flow = async (page) => {
     await page.locator('.tabbar').getByRole('button', { name: 'Plan' }).click();
     await page.locator('.page-head h1', { hasText: 'Plan' }).waitFor();
-    await page.locator('.list-item', { hasText: 'Full Body A' }).click();
+    await page.locator('.rot-card', { hasText: 'Full Body A' }).click();
     await btn(page, 'Start workout').waitFor();
     await page.waitForFunction(() => !document.documentElement.dataset.vt);
     return page.evaluate(() => window.__vt);

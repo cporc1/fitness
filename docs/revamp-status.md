@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** Phase 0 (swipe-back router, glass sheets, browser tests).
-- **Next up:** checkpoint 1.4.
+- **Next up:** Phase 1 pull request, then checkpoint 2.1.
 
 ## Checkpoints
 
@@ -58,7 +58,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - Compact cards with thumbnails, Start and Details.
   - A "then" connector on combo days, a weekly rings card and a floating resume pill.
   - At most one banner at a time.
-- [ ] **1.4 Plan restructure.**
+- [x] **1.4 Plan restructure.**
   - Program header, 7 day chips, workouts in rotation, your workouts and the Program list.
 - [ ] **Phase 1 PR merged.**
 
@@ -103,3 +103,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - 2026-10-07: Phase 0 merged (#3). 1.1 done: tabs are Today · Plan · Progress · Learn (`js/views/learn.js`, `tools.js`, `settings.js`; `more.js` deleted). Exercises and drills open as sheets everywhere. History is the old Log page, pushed from Progress. The resume pill floats above the tab bar on every tab.
 - 2026-10-07: 1.2 done. `js/views/workout.js` (route `workout`, replaces `template`; exports `workoutSummary` for Today cards). `openExerciseSheet(id, { item, suggestion })` and `openDrillSheet(id, { target })` in `library.js` show today's target when opened from a workout.
 - 2026-10-07: 1.3 done. Today keeps the selected day in module state (`showDay(iso)` jumps there from History). Day changes animate only `.day-content` (`html[data-vt=day-next|day-prev]`). The card → Workout page morph uses `sharedHero` in `router.js` and `view-transition-name: wk-hero`. The `day` route is gone.
+- 2026-10-07: 1.4 done. Plan has a program card (About the program opens a sheet with the phases), 7 day chips, horizontal workout cards with "Up next", your workouts with a Create card, and the Program list.

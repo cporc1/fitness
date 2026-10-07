@@ -1,59 +1,74 @@
-// Plan tab: phases, weekly schedule, workout templates, custom workout builder.
+// Plan tab: where you are in the program, your week, the workouts in rotation,
+// your own workouts, program settings, and the custom workout builder.
 
 import * as store from '../store.js';
-import { h, icon, ICONS, WEEKDAYS_LONG, todayISO, fmtDate, uid, toNumber, deepClone, fmtClock, put, fill } from '../util.js';
-import { ctx, go, back, registerRoute, render } from '../app.js';
-import { PHASES, SPLITS, gymTemplatesForPhase, WARMUP_GYM, COOLDOWN_GYM } from '../data/plans.js';
-import { SWIM_LEVELS, swimTemplateKeys, getSwimWorkout, expandForPool, workoutDistance, STROKES, getDrill, DRILLS, guideForItem } from '../data/swim.js';
+import { h, icon, ICONS, WEEKDAYS_SHORT, WEEKDAYS_LONG, todayISO, weekdayIndex, fmtDate, uid, toNumber, deepClone, put } from '../util.js';
+import { go, back, registerRoute, render } from '../app.js';
+import { PHASES, SPLITS, gymTemplatesForPhase } from '../data/plans.js';
+import { SWIM_LEVELS, swimTemplateKeys, getSwimWorkout, STROKES, DRILLS } from '../data/swim.js';
 import { getExercise } from '../data/exercises.js';
-import { programWeek, currentPhase, PROGRAM_WEEKS, templateById } from '../program.js';
-import { startGym, startSwim } from '../actions.js';
+import { programWeek, currentPhase, PROGRAM_WEEKS, nextGymTemplate, nextSwimWorkout } from '../program.js';
 import { pageHead, sectionHead, sheet, listItem, confirmDialog, toast, topbar, input, field, select, segmented } from '../ui.js';
-import { exercisePicker, exThumb, openExerciseSheet, openDrillSheet } from './library.js';
-import { describeItem, howToLink } from './session-swim.js';
+import { exercisePicker } from './library.js';
+import { describeItem } from './session-swim.js';
+import { workoutSummary } from './workout.js';
 
-function slotLabel(slot, custom) {
-  if (slot === 'gym') return ['gym', 'Gym · program'];
-  if (slot === 'swim') return ['swim', 'Swim · program'];
-  if (slot === 'both') return ['both', 'Gym + Swim'];
+function slotInfo(slot, custom) {
+  if (slot === 'gym') return { kind: 'gym', short: 'Gym', long: 'Gym' };
+  if (slot === 'swim') return { kind: 'swim', short: 'Swim', long: 'Swim' };
+  if (slot === 'both') return { kind: 'both', short: 'Both', long: 'Gym + Swim' };
   if (slot?.startsWith('custom:')) {
     const t = custom?.templates?.find((c) => c.id === slot.slice(7));
-    if (t) return [t.kind, t.name];
+    if (t) return { kind: t.kind, short: 'Yours', long: t.name };
   }
-  return ['', 'Rest'];
+  return { kind: 'rest', short: 'Rest', long: 'Rest' };
 }
+
+const KIND_ICON = { gym: ICONS.dumbbell, swim: ICONS.wave, rest: ICONS.rest };
 
 function phaseTimeline(state) {
   const week = Math.min(programWeek(state.profile), PROGRAM_WEEKS + 1);
   const active = currentPhase(state.profile);
-  return h('div', { class: 'card' },
-    h('div', { class: 'row between' },
-      h('div', { class: 'eyebrow' }, week > PROGRAM_WEEKS ? 'Plan complete' : `Week ${week} of ${PROGRAM_WEEKS}`),
-      state.profile?.phaseOverride ? h('span', { class: 'chip plain' }, 'Phase set manually') : null),
-    h('div', { style: { display: 'grid', gridTemplateColumns: `repeat(${PROGRAM_WEEKS}, 1fr)`, gap: '3px' }, 'aria-hidden': 'true' },
-      Array.from({ length: PROGRAM_WEEKS }, (_, i) => h('span', {
-        style: {
-          height: '8px', borderRadius: '4px',
-          background: i + 1 < week ? 'var(--good)' : i + 1 === week ? 'var(--pool)' : 'var(--surface-2)',
-        },
-      }))),
-    h('div', { class: 'stack' }, PHASES.map((p) => h('div', { class: 'row', style: { alignItems: 'flex-start', opacity: p.id === active.id ? 1 : 0.6 } },
+  return h('div', { class: 'stack lg' },
+    h('p', { class: 'ink-2' }, 'Twelve weeks in three phases. Each phase builds on the last, and the app moves you on automatically.'),
+    h('div', { class: 'stack' }, PHASES.map((p) => h('div', { class: 'row', style: { alignItems: 'flex-start', opacity: p.id === active.id ? 1 : 0.7 } },
       h('span', { class: `chip ${p.id === active.id ? 'swim' : 'plain'}`, style: { marginTop: '2px' } }, `Wk ${p.weeks[0]}–${p.weeks[1]}`),
       h('div', { class: 'grow stack', style: { gap: '2px' } },
         h('strong', null, `${p.name}${p.id === active.id ? ' · now' : ''}`),
         h('span', { class: 'small ink-2' }, p.summary),
-        p.id === active.id ? h('span', { class: 'small muted' }, p.effort) : null)))));
+        p.id === active.id ? h('span', { class: 'small muted' }, p.effort) : null)))),
+    week > PROGRAM_WEEKS ? h('div', { class: 'callout' }, 'You finished all 12 weeks. Keep going in Phase 3, or restart from week 1 in Program below with your new, heavier weights.') : null,
+    h('button', { class: 'btn ghost', onclick: () => go('guide', { id: 'start' }) }, 'Read "Start here: how this plan works"'));
 }
 
-function scheduleCard(state) {
+function programCard(state) {
+  const week = Math.min(programWeek(state.profile), PROGRAM_WEEKS + 1);
+  const active = currentPhase(state.profile);
+  return h('button', { class: 'program-card', type: 'button', onclick: () => sheet('About the program', phaseTimeline(state)) },
+    h('div', { class: 'row between' },
+      h('span', { class: 'eyebrow' }, week > PROGRAM_WEEKS ? 'Plan complete' : `Week ${week} of ${PROGRAM_WEEKS}`),
+      h('span', { class: 'pc-link' }, 'About the program', icon(ICONS.chevron, 14))),
+    h('div', { class: 'pc-title' }, `Phase ${active.id}: ${active.name}`),
+    h('p', { class: 'small ink-2' }, active.summary),
+    h('div', { class: 'pc-bar', 'aria-hidden': 'true' }, Array.from({ length: PROGRAM_WEEKS }, (_, i) => h('span', {
+      class: i + 1 < week ? 'done' : i + 1 === week ? 'now' : '',
+    }))),
+    state.profile?.phaseOverride ? h('span', { class: 'chip plain', style: { alignSelf: 'flex-start' } }, 'Phase set manually') : null);
+}
+
+function weekChips(state) {
   const days = state.schedule?.days || Array(7).fill('rest');
-  return h('div', { class: 'card flush' }, h('div', { class: 'list' }, days.map((slot, i) => {
-    const [kind, label] = slotLabel(slot, state.custom);
-    return h('button', { class: 'list-item', type: 'button', onclick: () => editDay(i, state) },
-      h('span', { style: { width: '92px', fontWeight: 600 } }, WEEKDAYS_LONG[i]),
-      h('span', { class: 'grow' }, kind ? h('span', { class: `chip ${kind}` }, label) : h('span', { class: 'muted' }, label)),
-      icon(ICONS.chevron, 18));
-  })));
+  const todayIdx = weekdayIndex(todayISO());
+  return h('div', { class: 'day-chips' }, days.map((slot, i) => {
+    const info = slotInfo(slot, state.custom);
+    const mark = info.kind === 'both'
+      ? h('span', { class: 'both-icons' }, icon(ICONS.dumbbell, 13), icon(ICONS.wave, 13))
+      : icon(KIND_ICON[info.kind] || ICONS.dumbbell, 18);
+    return h('button', {
+      class: `day-chip ${info.kind}${i === todayIdx ? ' is-today' : ''}`, type: 'button',
+      'aria-label': `${WEEKDAYS_LONG[i]}: ${info.long}. Change`, onclick: () => editDay(i, state),
+    }, h('span', { class: 'dc-day' }, WEEKDAYS_SHORT[i]), h('span', { class: 'dc-mark' }, mark), h('span', { class: 'dc-kind' }, info.short));
+  }));
 }
 
 function editDay(i, state) {
@@ -73,36 +88,39 @@ function editDay(i, state) {
     listItem({ title: 'Rest', sub: 'Recovery day', leading: h('span', { class: 'chip' }, 'Rest'), onclick: () => choose('rest', close), trailing: null }))));
 }
 
-function workoutsThisPhase(state) {
-  const phase = currentPhase(state.profile);
-  const poolLen = state.profile?.pool?.len || 25;
-  const unitD = state.profile?.pool?.unit || 'yd';
-  const gym = gymTemplatesForPhase(phase.id, state.profile?.split).map((t) => listItem({
-    title: t.name, sub: `${t.exercises.length} exercises · ${t.focus}`,
-    leading: h('span', { class: 'sr-icon gym' }, icon(ICONS.dumbbell)),
-    onclick: () => go('workout', { id: t.id }),
-  }));
-  const swim = swimTemplateKeys(state.profile?.swimLevel || 'novice', phase.id).map((k) => {
-    const w = getSwimWorkout(k, state.settings?.swimMode || 'full');
-    const dist = workoutDistance(expandForPool(w.blocks, poolLen));
-    return listItem({
-      title: w.name, sub: `${dist ? `${dist} ${unitD} · ` : ''}${w.focus}`,
-      leading: h('span', { class: 'sr-icon swim' }, icon(ICONS.wave)),
-      onclick: () => go('workout', { id: w.id }),
-    });
-  });
-  return h('div', { class: 'card flush session-row' }, h('div', { class: 'list' }, gym, swim));
+function workoutCard(state, t, badge) {
+  const sum = workoutSummary(t, state);
+  return h('button', { class: `rot-card ${sum.kind}`, type: 'button', onclick: () => go('workout', { id: t.id }) },
+    h('span', { class: 'rot-top' },
+      h('span', { class: `sr-icon ${sum.kind}` }, icon(sum.kind === 'swim' ? ICONS.wave : ICONS.dumbbell)),
+      badge ? h('span', { class: 'chip good' }, badge) : null),
+    h('span', { class: 'rot-name' }, t.name),
+    h('span', { class: 'rot-sub' }, sum.kind === 'swim'
+      ? (sum.dist ? `${sum.dist} ${sum.unitD}` : 'Skills session')
+      : `${sum.items.length} exercises · ~${sum.minutes} min`));
 }
 
-function customList(state) {
+function rotation(state) {
+  const phase = currentPhase(state.profile);
+  const split = state.profile?.split || 'full';
+  const mode = state.settings?.swimMode || 'full';
+  const nextGym = nextGymTemplate(state.sessions, phase.id, split);
+  const nextSwim = nextSwimWorkout(state.sessions, state.profile?.swimLevel, phase.id, mode);
+  const gym = gymTemplatesForPhase(phase.id, split);
+  const swim = swimTemplateKeys(state.profile?.swimLevel || 'novice', phase.id).map((k) => getSwimWorkout(k, mode));
+  return h('div', { class: 'hscroll' },
+    gym.map((t) => workoutCard(state, t, t.id === nextGym.id ? 'Up next' : null)),
+    swim.map((w) => workoutCard(state, w, w.id === nextSwim?.id ? 'Up next' : null)));
+}
+
+function customCards(state) {
   const items = state.custom?.templates || [];
-  return h('div', { class: 'card flush session-row' }, h('div', { class: 'list' },
-    items.map((t) => listItem({
-      title: t.name, sub: t.kind === 'swim' ? 'Swim' : `${t.exercises.length} exercises`,
-      leading: h('span', { class: `sr-icon ${t.kind}` }, icon(t.kind === 'swim' ? ICONS.wave : ICONS.dumbbell)),
-      onclick: () => go('workout', { id: t.id }),
-    })),
-    listItem({ title: 'Create a workout', sub: 'Build your own gym or swim session', leading: h('span', { class: 'sr-icon other' }, icon(ICONS.plus)), onclick: () => go('builder', {}) })));
+  return h('div', { class: 'hscroll' },
+    h('button', { class: 'rot-card create', type: 'button', onclick: () => go('builder', {}) },
+      h('span', { class: 'sr-icon other' }, icon(ICONS.plus)),
+      h('span', { class: 'rot-name' }, 'Create a workout'),
+      h('span', { class: 'rot-sub' }, 'Your own gym or swim session')),
+    items.map((t) => workoutCard(state, t, null)));
 }
 
 function programSettings(state) {
@@ -180,11 +198,14 @@ function editSwaps(state) {
 
 registerRoute('plan', (_p, state) => h('div', { class: 'view' },
   pageHead('Plan', '12-week gym + swim program'),
-  phaseTimeline(state),
-  h('section', { class: 'section' }, sectionHead('Your week'), h('p', { class: 'small muted' }, 'Tap a day to change it. Program days pick the right session automatically.'), scheduleCard(state)),
-  h('section', { class: 'section' }, sectionHead('This phase'), workoutsThisPhase(state)),
-  h('section', { class: 'section' }, sectionHead('Your workouts'), customList(state)),
-  h('section', { class: 'section' }, sectionHead('Program settings'), programSettings(state))));
+  programCard(state),
+  h('section', { class: 'section' },
+    sectionHead('Your week'),
+    weekChips(state),
+    h('p', { class: 'xs muted' }, 'Tap a day to change it. Program days pick the right workout automatically.')),
+  h('section', { class: 'section' }, sectionHead('Workouts in rotation'), rotation(state)),
+  h('section', { class: 'section' }, sectionHead('Your workouts'), customCards(state)),
+  h('section', { class: 'section' }, sectionHead('Program'), programSettings(state))));
 
 // ---------------- builder ----------------
 

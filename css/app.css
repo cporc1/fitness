@@ -467,6 +467,50 @@ html[data-vt="day-prev"]::view-transition-new(day-content) { animation: day-in-l
 .tip { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; background: var(--surface-2); }
 .tip p { font-size: var(--fs-sm); }
 
+/* ---------- plan ---------- */
+.program-card {
+  display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 16px; border-radius: 22px; cursor: pointer; text-align: left;
+  border: 1px solid var(--line); background: linear-gradient(165deg, var(--pool-wash), var(--surface) 70%); color: var(--ink);
+}
+.pc-link { display: inline-flex; align-items: center; gap: 2px; font-size: var(--fs-sm); font-weight: 700; color: var(--pool); }
+.pc-title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xl); line-height: 1.1; }
+.pc-bar { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; margin-top: 2px; }
+.pc-bar span { height: 8px; border-radius: 4px; background: var(--surface-2); }
+.pc-bar span.done { background: var(--good); }
+.pc-bar span.now { background: var(--pool); }
+.day-chips { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.day-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 9px; min-width: 0; cursor: pointer;
+  border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+  transition: transform .15s var(--ease-snappy);
+}
+.day-chip:active { transform: scale(.94); }
+.day-chip .dc-day { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+.day-chip .dc-mark { display: grid; place-items: center; height: 20px; }
+.day-chip .dc-kind { font-size: 11px; font-weight: 700; }
+.day-chip.gym { background: var(--iron-wash); color: var(--iron); border-color: transparent; }
+.day-chip.swim { background: var(--pool-wash); color: var(--pool); border-color: transparent; }
+.day-chip.both { background: linear-gradient(180deg, var(--iron-wash) 50%, var(--pool-wash) 50%); color: var(--ink); border-color: transparent; }
+.day-chip.rest { color: var(--muted); }
+.day-chip.is-today { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.hscroll {
+  display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+  margin-inline: -16px; padding: 2px 16px 6px; scroll-padding-inline: 16px;
+}
+.hscroll::-webkit-scrollbar { display: none; }
+.rot-card {
+  flex: 0 0 158px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 6px; padding: 14px; min-height: 132px;
+  border-radius: 20px; border: 1px solid var(--line); background: var(--surface); text-align: left; cursor: pointer; color: var(--ink);
+  transition: transform .15s var(--ease-snappy);
+}
+.rot-card:active { transform: scale(.97); }
+.rot-card.gym { background: linear-gradient(165deg, var(--iron-wash), var(--surface) 70%); }
+.rot-card.swim { background: linear-gradient(165deg, var(--pool-wash), var(--surface) 70%); }
+.rot-card.create { border-style: dashed; }
+.rot-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: auto; }
+.rot-name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-lg); line-height: 1.1; }
+.rot-sub { font-size: var(--fs-xs); font-weight: 600; color: var(--muted); }
+
 /* ---------- session (gym) ---------- */
 .session-head {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; margin-inline: -16px; padding: 8px 12px 10px;

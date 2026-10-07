@@ -19,3 +19,15 @@ jobs:
         run: npm test
       - name: Syntax check
         run: for f in $(find js -name '*.js') sw.js; do node --check "$f"; done
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright (test-only, not an app dependency)
+        run: npm i --no-save playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: End-to-end flows
+        run: npm run test:e2e

@@ -24,8 +24,8 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 ## Current state
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
-- **Live on `main`:** all phases (0–4), plus fix 5.1. Checkpoints 5.2–5.4 are on the working branch, in the follow-up PR.
-- **Next up:** merge the follow-up PR. After that, nothing is required.
+- **Live on `main`:** all phases (0–4) and the follow-up round (5.1–5.4).
+- **Next up:** nothing required.
 - **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
@@ -102,7 +102,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - [x] **5.1 Finished workouts stay finished.**
   - Bug: a workout finished from Focus mode came back as "in progress" and blocked the swim.
   - Fix: late saves of a session that's no longer active are ignored, and Finish no longer redraws the live screen. On launch, a stuck copy of a saved workout is cleared.
-  - Shipped on its own PR.
+  - Shipped on its own PR: [cporc1/fitness#9](https://github.com/cporc1/fitness/pull/9).
 - [x] **5.2 Warm-up and cool-down as real steps.**
   - Warm-up: stretches first (they want more flexibility), then warm-up moves.
   - Cool-down: static stretches.
@@ -115,7 +115,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 - [x] **5.4 Animated swim demos.**
   - Strokes and drills get looping animations, like the exercise photos.
   - They're original drawings made in code, so there's nothing to license or credit. Openly licensed animations didn't cover the drills.
-- [ ] **Follow-up PR merged.**
+- [x] **Follow-up PR merged.** [cporc1/fitness#10](https://github.com/cporc1/fitness/pull/10)
 
 ## Log
 
@@ -185,3 +185,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
     - animated stroke tiles and drill stills in Learn.
   - The 18 new stretches and moves also got short demo videos, each checked to exist and allow embedding.
   - SW v9.
+- 2026-10-07: Follow-up round merged (#9, #10). All checkpoints done; the live site serves service worker v9.

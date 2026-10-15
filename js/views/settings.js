@@ -3,7 +3,8 @@
 
 import * as store from '../store.js';
 import { h, icon, ICONS, todayISO, addDays, fmtDate, fmtNum, toNumber } from '../util.js';
-import { go, back, registerRoute, resetNav } from '../app.js';
+import { go, back, registerRoute, resetNav, render } from '../app.js';
+import { pushConfigured, pushSupport, permission, notifySettings, enablePush, disablePush, sendTest } from '../notify.js';
 import { resetOnboarding } from './onboarding.js';
 import { stopRest } from '../timer.js';
 import { topbar, pageHead, listItem, segmented, input, field, confirmDialog, toast } from '../ui.js';
@@ -16,6 +17,71 @@ const POOL_OPTIONS = [
 
 function group(title, ...children) {
   return h('section', { class: 'section' }, h('div', { class: 'eyebrow group-title' }, title), ...children);
+}
+
+function toggleRow({ id, label, sub, checked, disabled = false, onToggle }) {
+  return h('label', { class: 'check-row' },
+    h('input', { type: 'checkbox', id, checked, disabled, onclick: (e) => onToggle(e.target.checked, e.target) }),
+    h('span', { class: 'grow' }, h('div', { style: { fontWeight: 600 } }, label), sub ? h('div', { class: 'small muted' }, sub) : null));
+}
+
+/** Workout reminders and milestones (hidden until the push server is set up). */
+function notificationsGroup(state) {
+  if (!pushConfigured()) return null;
+  const support = pushSupport();
+  if (support === 'install') {
+    return group('Notifications', h('div', { class: 'card' },
+      h('p', { class: 'small ink-2' }, 'Workout reminders and milestone notifications need Lift & Lap on your Home Screen. Add it, open it from there, then turn them on here.'),
+      h('button', { class: 'btn quiet', onclick: () => go('install') }, 'How to add it')));
+  }
+  if (support !== 'ok') return group('Notifications', h('div', { class: 'card' }, h('p', { class: 'small ink-2' }, 'This browser can\'t show notifications.')));
+  const n = notifySettings(state.settings);
+  const blocked = permission() === 'denied';
+  const on = n.on && permission() === 'granted';
+  const setN = (patch) => store.update('settings', (s) => ({ ...s, notify: { ...notifySettings(s), ...patch } }));
+  const master = toggleRow({
+    id: 'st-notify', label: 'Notifications', checked: on, disabled: blocked,
+    sub: blocked ? 'Blocked for Lift & Lap. Allow them in iPhone Settings → Notifications → Lift & Lap.'
+      : on ? 'On for this iPhone' : 'Workout reminders and milestones on this iPhone',
+    onToggle: async (want, input) => {
+      input.disabled = true;
+      if (want) {
+        try {
+          const res = await enablePush();
+          toast(res.ok ? 'Notifications are on'
+            : res.reason === 'denied' ? 'Notifications are blocked. Allow them in iPhone Settings → Notifications → Lift & Lap.'
+              : 'Notifications weren\'t turned on.');
+        } catch {
+          toast('Couldn\'t reach the notification server. Try again in a moment.');
+        }
+      } else {
+        await disablePush();
+      }
+      render();
+    },
+  });
+  const time = h('input', {
+    class: 'input', type: 'time', id: 'st-notify-time', value: n.time,
+    onchange: (e) => { if (/^\d{2}:\d{2}$/.test(e.target.value)) setN({ time: e.target.value }); },
+  });
+  return group('Notifications', h('div', { class: 'card' },
+    master,
+    on ? [
+      toggleRow({
+        id: 'st-notify-reminders', label: 'Workout reminders', checked: n.reminders, onToggle: (v) => setN({ reminders: v }),
+        sub: 'On training days, with what\'s planned. Skipped once you\'ve trained that day.',
+      }),
+      n.reminders ? field('Remind me at', time) : null,
+      toggleRow({
+        id: 'st-notify-milestones', label: 'Milestones', checked: n.milestones, onToggle: (v) => setN({ milestones: v }),
+        sub: 'When you earn one, plus a heads-up when a new program phase starts.',
+      }),
+      h('button', {
+        class: 'btn quiet', onclick: async () => {
+          try { await sendTest(); toast('Sent. It should arrive in a few seconds.'); } catch { toast('Couldn\'t send right now. Try again in a moment.'); }
+        },
+      }, 'Send a test notification'),
+    ] : null));
 }
 
 registerRoute('settings', (_p, state) => {
@@ -58,6 +124,7 @@ registerRoute('settings', (_p, state) => {
         h('span', { class: 'hint' }, 'List shows every exercise. Focus shows one at a time with + and − buttons. You can switch during a workout too.')),
       row('Sound when rest is over', 'sound'),
       row('Keep screen awake during workouts', 'wakeLock', 'Stops your phone locking mid-set'))),
+    notificationsGroup(state),
     group('Appearance', h('div', { class: 'card' },
       segmented([{ value: 'auto', label: 'Auto' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }], st.theme || 'auto', (v) => setSettings({ theme: v }), 'Theme'),
       row('Reduce motion', 'reduceMotion', 'Screens change without sliding or bouncing. The app also follows your iPhone\'s Reduce Motion setting.', { optIn: true }),
@@ -178,6 +245,7 @@ registerRoute('data', (_p, state) => {
           const ok = await confirmDialog({ title: 'Delete everything?', message: 'All workouts, body entries and settings will be erased and setup will start again. This cannot be undone.', confirm: 'Delete everything', danger: true });
           if (!ok) return;
           stopRest();
+          disablePush(); // stop reminders for the old plan
           resetOnboarding();
           store.resetAll();
           resetNav('today');

@@ -13,7 +13,8 @@ A phone-first training app for a beginner with a full gym and a lap pool: a 12-w
 | **Swim logger** | A "Before you get in" card (with an Apple Watch Pool Swim reminder), then the current rep with a big "Rep done" button and what's next; all sets fold away underneath. An animated swimmer shows each stroke and drill (seen from the side, with captions for each phase), there's an automatic rest countdown, and stroke and drill how-tos with video, distance tracking in your pool's units (25 yd, 25 m or 50 m), a free-swim lap counter, and a Simple mode (just freestyle, breaststroke and kickboard) |
 | **Progress** | Workouts per week, estimated 1-rep max per lift, weekly volume, swim distance and pace, milestones, and History: a calendar and list of every session with details, edit, delete and "log another activity" |
 | **Learn** | 50 gym exercises with looping start/finish photos, an in-app video, step-by-step instructions and "Find it in the gym" (other names the machine goes by and what it looks like); 4 swim strokes and 15 drills with in-app videos; 12 beginner guides; tools (plate calculator, 1RM, swim pace, calories & protein). Search finds machines by their other names |
-| **Settings** | Name and units, pool, rest timer, theme, Reduce motion and Reduce transparency, optional body and habit tracking, backup/restore and "Delete all data" to start over after a test run |
+| **Notifications** | Workout reminders on training days at a time you pick, saying what's planned and skipped once you've trained. Notifications for milestones when you earn them, and a heads-up when a new program phase starts. Milestones are also celebrated on the finish screen. Needs the app on your Home Screen (iOS 16.4 or later) and the small push server in `server/` |
+| **Settings** | Name and units, pool, rest timer, notifications, theme, Reduce motion and Reduce transparency, optional body and habit tracking, backup/restore and "Delete all data" to start over after a test run |
 
 Moving around: every page you open can be closed by swiping from the left edge, each tab remembers where you were, and exercises, strokes and drills open as sheets you drag down to close.
 
@@ -36,6 +37,14 @@ One-time setup (GitHub Pages is free for public repositories; a private one need
 3. On your iPhone, open the address in **Safari** → **Share** → **Add to Home Screen** → **Add**.
 4. Open Lift & Lap from the new icon and do the setup there. Always log from the icon: the installed app keeps its own storage, separate from Safari tabs.
 
+### Notifications
+
+iPhone web apps can't schedule a notification themselves, so reminders come from a tiny push server: a Cloudflare Worker on the free plan, in `server/`.
+- **The app** subscribes to Web Push and sends the server your next four weeks of training.
+- **The server** sends each reminder at your chosen time through Apple's push service.
+- **Setup:** [`server/README.md`](server/README.md) covers the one-time Cloudflare and GitHub setup, then a GitHub Action deploys it.
+- **Before it's set up,** the Notifications section stays hidden. The milestone celebrations work regardless.
+
 ## Your data
 
 GitHub holds the app, not your workouts. Your workouts, weights and body measurements are personal, and a public repository would show them to everyone, so they are stored privately on your phone (`localStorage`, one small document per area plus one per month of workouts).
@@ -50,7 +59,7 @@ No dependencies to install.
 
 ```bash
 npm start      # serves the folder at http://localhost:8080 (or: python3 -m http.server 8080)
-npm test       # unit tests for progression, plans, stats and plate math (node --test)
+npm test       # unit tests: progression, plans, stats, plate math, reminders, and the push server (node --test)
 npm run test:e2e   # end-to-end flows in a real browser (needs Playwright; see tests/e2e/README.md)
 ```
 

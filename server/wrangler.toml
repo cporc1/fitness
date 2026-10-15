@@ -1,0 +1,20 @@
+# Lift & Lap push server. Deployed by .github/workflows/push-server.yml.
+name = "liftlap-push"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]
+
+[vars]
+ALLOWED_ORIGINS = "https://cporc1.github.io"
+VAPID_SUBJECT = "https://cporc1.github.io/fitness/"
+
+[observability]
+enabled = true

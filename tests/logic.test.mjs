@@ -422,3 +422,38 @@ test('every swim stroke and drill has an animated demo with sane poses', async (
   assert.ok(Math.abs(a(1) - a(0) - 360) < 1e-9);
   assert.ok(Math.abs(a(0.999) - a(1)) < 2);
 });
+
+test('reminders: four weeks of texts, program news, finished parts and days left out', async () => {
+  const { reminderPlan } = await import('../js/reminders.js');
+  const state = {
+    profile: { units: 'lb', startDate: '2026-10-05', split: 'full', swimLevel: 'novice', pool: { len: 25, unit: 'yd' } },
+    schedule: { days: ['gym', 'swim', 'both', 'rest', 'gym', 'rest', 'rest'] }, sessions: [], custom: { templates: [] }, settings: {},
+  };
+  const out = reminderPlan(state, '2026-10-14'); // a Wednesday: gym + swim
+  assert.equal(out.plan.find((e) => e.date === '2026-10-14').title, 'Gym and swim today');
+  assert.match(out.plan.find((e) => e.date === '2026-10-14').body, /, then .+ \(\d+ yd\)\.$/);
+  assert.equal(out.plan.some((e) => e.date === '2026-10-15'), false, 'Thursday is a rest day');
+  assert.ok(out.plan.every((e) => e.date >= '2026-10-14' && e.date < addDays('2026-10-14', 28)));
+  assert.deepEqual(out.week, state.schedule.days);
+  assert.deepEqual(out.plan.filter((e) => e.kind === 'program').map((e) => [e.date, e.title]), [['2026-11-02', 'Phase 2 starts today: Build']]);
+
+  const gym = { id: 'g', kind: 'gym', templateId: 'p1-a', date: '2026-10-14', exercises: [] };
+  assert.match(reminderPlan({ ...state, sessions: [gym] }, '2026-10-14').plan.find((e) => e.date === '2026-10-14').title, /^Swim today: /);
+  const both = reminderPlan({ ...state, sessions: [gym, { id: 's', kind: 'swim', templateId: 'swim:novice-p1-tech', date: '2026-10-14', distance: 500 }] }, '2026-10-14');
+  assert.equal(both.plan.some((e) => e.date === '2026-10-14'), false);
+  assert.deepEqual(both.done, ['2026-10-14']);
+
+  const later = reminderPlan(state, '2026-11-28');
+  assert.deepEqual(later.plan.filter((e) => e.kind === 'program').map((e) => e.date), ['2026-11-30', '2026-12-21']);
+  assert.deepEqual(reminderPlan({ ...state, profile: { ...state.profile, phaseOverride: 2 } }, '2026-10-14').plan.filter((e) => e.kind === 'program'), []);
+});
+
+test('milestones: only newly earned ones are celebrated', async () => {
+  const { newMilestones } = await import('../js/milestones.js');
+  const s = (id, kind = 'gym', extra = {}) => ({ id, kind, date: '2026-10-14', exercises: [], ...extra });
+  assert.deepEqual(newMilestones([], [s('a')]).map((m) => m.id), ['first']);
+  assert.deepEqual(newMilestones([s('a')], [s('b'), s('a')]).map((m) => m.id), []);
+  assert.deepEqual(newMilestones([s('a')], [s('b', 'swim', { distance: 1000, pool: { len: 25, unit: 'yd' } }), s('a')]).map((m) => m.id), ['first-swim', 'k1']);
+  const nine = Array.from({ length: 9 }, (_, i) => s(`x${i}`));
+  assert.deepEqual(newMilestones(nine, [s('y'), ...nine]).map((m) => m.id), ['ten']);
+});

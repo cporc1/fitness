@@ -8,6 +8,7 @@ import { ctx, registerRoute, tab } from '../app.js';
 import { getExercise } from '../data/exercises.js';
 import { sessionVolume, pacePer100, swimDistance } from '../stats.js';
 import { slotForDate } from '../program.js';
+import { milestoneById } from '../milestones.js';
 import { confetti } from '../motion.js';
 import { segmented, ring } from '../ui.js';
 
@@ -84,6 +85,8 @@ registerRoute('celebration', ({ id }, state, { entering }) => {
       h('p', { class: 'ink-2' }, `${x.name}${counts.planned ? ` · ${counts.done} of ${counts.planned} ${swim ? 'swims' : 'workouts'} this week` : ''}`)),
     h('div', { class: 'cel-stats' }, stats.map(([k, v]) => h('div', { class: 'kpi' }, h('span', { class: 'kpi-label' }, k), h('span', { class: 'kpi-value' }, v)))),
     routineChips(x),
+    (x.milestones || []).length ? h('div', { class: 'pr-list' }, x.milestones.map(milestoneById).filter(Boolean).map((m, i) => h('div', { class: 'pr medal milestone', style: { '--i': String(i) } },
+      icon(ICONS.trophy, 22), h('span', { class: 'grow' }, h('span', { class: 'eyebrow' }, 'New milestone'), h('strong', null, m.title), h('span', { class: 'small ink-2' }, m.sub))))) : null,
     x.prs?.length ? h('div', { class: 'pr-list' }, x.prs.map((pr, i) => h('div', { class: 'pr medal', style: { '--i': String(i) } },
       icon(ICONS.trophy, 22), h('span', null, prText(pr, unit, poolUnit))))) : null,
     h('div', { class: 'field' },

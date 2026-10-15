@@ -1,7 +1,7 @@
 // Offline support: precache the app shell, serve it cache-first and refresh
 // in the background. Bump VERSION when shipping changes.
 
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = `liftlap-${VERSION}`;
 const FONT_CACHE = 'liftlap-fonts';
 
@@ -29,6 +29,9 @@ const SHELL = [
   'js/actions.js',
   'js/media.js',
   'js/swim-anim.js',
+  'js/notify.js',
+  'js/reminders.js',
+  'js/milestones.js',
   'js/data/exercises.js',
   'js/data/plans.js',
   'js/data/swim.js',
@@ -86,4 +89,28 @@ self.addEventListener('fetch', (event) => {
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     event.respondWith(staleWhileRevalidate(FONT_CACHE, request));
   }
+});
+
+// ---------------- notifications ----------------
+// Sent by the push server in server/: { title, body, tag, url }.
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { data = { body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'Lift & Lap', {
+    body: data.body || '',
+    tag: data.tag || undefined,
+    icon: 'icons/icon-192.png',
+    badge: 'icons/icon-192.png',
+    data: { url: data.url || './' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || './', self.registration.scope).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+    const open = list.find((c) => c.url.startsWith(self.registration.scope));
+    return open ? open.focus() : self.clients.openWindow(url);
+  }));
 });

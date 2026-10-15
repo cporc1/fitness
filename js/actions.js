@@ -13,6 +13,8 @@ import { getExercise } from './data/exercises.js';
 import { detectPRs, swimPRs } from './stats.js';
 import { sheet, confirmDialog, toast, input, field, listItem } from './ui.js';
 import { stopRest } from './timer.js';
+import { newMilestones } from './milestones.js';
+import { afterFinish } from './notify.js';
 
 export async function ensureNoActive() {
   const { active } = ctx();
@@ -128,12 +130,15 @@ function saveFinished(session, priorSessions, unit) {
   stopRest();
   const prs = session.kind === 'gym' ? detectPRs(session, priorSessions, unit) : swimPRs(session, priorSessions, session.pool?.unit);
   session.prs = prs;
+  const fresh = newMilestones(priorSessions, [session, ...priorSessions]);
+  if (fresh.length) session.milestones = fresh.map((m) => m.id);
   // Silent, so the live screen isn't drawn again for a session that's over;
   // the celebration screen renders next.
   store.saveSession(session, { silent: true });
   store.set('active', null, { silent: true });
   invalidateSessions();
   replace('celebration', { id: session.id });
+  afterFinish(fresh).catch(() => {}); // refresh reminders; notify new milestones
 }
 
 /** Sheet listing every workout you can start right now. */

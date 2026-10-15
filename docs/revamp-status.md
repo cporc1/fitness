@@ -25,7 +25,7 @@ Start a new Claude Code session on `cporc1/fitness` and say:
 
 - **Working branch:** `claude/wizardly-hopper-dy74jj`
 - **Live on `main`:** all phases (0–4) and the follow-up round (5.1–5.4).
-- **Next up:** nothing required.
+- **Next up:** checkpoint 6.4 in the notifications round below. It needs the Cloudflare setup in `server/README.md`.
 - **To check on a real iPhone:**
   - Edge swipe-back feel, and that it never animates twice.
   - Smoothness of the glass, caustics and card stack.
@@ -117,6 +117,24 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - They're original drawings made in code, so there's nothing to license or credit. Openly licensed animations didn't cover the drills.
 - [x] **Follow-up PR merged.** [cporc1/fitness#10](https://github.com/cporc1/fitness/pull/10)
 
+### Notifications round: workout reminders and milestones
+iPhone web apps can't schedule notifications themselves, so a small push server (a Cloudflare Worker, free plan) sends them. The user chose this over calendar alerts on 2026-10-15.
+- [x] **6.1 Push server** (`server/`).
+  - The Worker has one Durable Object, with VAPID and aes128gcm done in Web Crypto.
+  - Each user gets an alarm at their reminder time in their own time zone, with a weekly fallback after the synced plan runs out.
+  - Tests: `tests/push.test.mjs`, including the RFC 8291 example. It also passed a smoke test in workerd (`wrangler dev`).
+  - Deployed by `.github/workflows/push-server.yml` once the secrets exist.
+- [x] **6.2 App side.**
+  - Settings → Notifications: turn them on, reminders and their time, milestones, and a test button. The section is hidden until `PUSH_URL` is set.
+  - `js/reminders.js` builds four weeks of reminder texts plus program news.
+  - `js/notify.js` subscribes and re-syncs on changes, on opening and after finishing a session.
+  - `sw.js` shows pushes and opens the app when one is tapped.
+- [x] **6.3 Milestones.**
+  - `js/milestones.js` holds the list; finishing a session stores any new ones on it.
+  - The celebration shows them, and a notification goes out when notifications are on.
+- [ ] **6.4 Cloudflare setup** (the user, about 5 minutes): account, API token, and the two GitHub secrets (`server/README.md`).
+- [ ] **6.5 Deploy and connect.** Run the Push server workflow, put its address in `PUSH_URL` in `js/notify.js`, merge, and turn notifications on from the iPhone.
+
 ## Log
 
 - 2026-10-07: Plan reviewed and approved with changes (plan section 0). Checkpoints written.
@@ -186,3 +204,4 @@ Start a new Claude Code session on `cporc1/fitness` and say:
   - The 18 new stretches and moves also got short demo videos, each checked to exist and allow embedding.
   - SW v9.
 - 2026-10-07: Follow-up round merged (#9, #10). All checkpoints done; the live site serves service worker v9.
+- 2026-10-15: Notifications round. 6.1–6.3 done (server, app side hidden until configured, milestone celebrations). Waiting on the Cloudflare secrets for 6.4–6.5. SW v10.

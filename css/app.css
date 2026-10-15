@@ -822,6 +822,9 @@ html.sheet-open .rest-screen, html.sheet-closing .rest-screen { top: var(--vy, 0
 .cel-stats .kpi { padding: 12px; }
 .cel-stats .kpi-value { font-size: var(--fs-xl); }
 .pr.medal { animation: medal-in var(--dur-bouncy) var(--ease-bouncy) backwards; animation-delay: calc(700ms + var(--i) * 120ms); }
+.pr.milestone { background: var(--iron-wash); }
+.pr.milestone svg { color: var(--iron); }
+.pr.milestone .grow { display: flex; flex-direction: column; gap: 1px; }
 @keyframes medal-in { from { transform: rotateX(90deg) scale(.9); opacity: 0; } }
 .confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; }
 .big-tap.good { background: var(--good); }

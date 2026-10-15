@@ -80,6 +80,7 @@ test('setup, combo day, exercise details, reset', async ({ newPage, open, check,
   await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
   await page.locator('.celebrate h1', { hasText: 'Workout complete' }).waitFor();
   check('Finishing opens the celebration with the stats', (await page.locator('.cel-stats .kpi').count()) === 3);
+  check('…and celebrates the new milestone', (await page.locator('.pr.milestone', { hasText: 'First workout' }).count()) === 1);
   await page.locator('.celebrate .seg button', { hasText: 'Hard' }).click();
   await page.waitForFunction(() => Object.keys(localStorage).some((k) => k.startsWith('liftlap:v1:sessions-') && localStorage.getItem(k).includes('"rpe":8')));
   check('"How did it feel" saves to the workout', true);
@@ -651,6 +652,72 @@ test('swim demos: everywhere a stroke or drill appears; moving unless motion is 
   const c = await pose(still, '.sheet .swim-anim');
   await still.waitForTimeout(500);
   check('With reduced motion it holds still', c === (await pose(still, '.sheet .swim-anim')));
+});
+
+test('notifications: hidden until set up; on, plan sync, time, test, milestone, off', async ({ newPage, open, check }) => {
+  const plain = await newPage();
+  await open(plain, { profile: PROFILE, schedule: WEEK });
+  await openSettings(plain);
+  check('No Notifications section until the push server is set up', (await plain.locator('#st-notify').count()) === 0);
+
+  const page = await newPage();
+  const calls = [];
+  await page.addInitScript(() => {
+    window.LIFTLAP_PUSH_URL = 'https://push.example';
+    const sub = {
+      endpoint: 'https://web.push.apple.com/test',
+      toJSON() { return { endpoint: this.endpoint, expirationTime: null, keys: { p256dh: 'BKey', auth: 'auth' } }; },
+      unsubscribe: async () => { window.unsubscribed = true; return true; },
+    };
+    let current = null;
+    const reg = { pushManager: { getSubscription: async () => current, subscribe: async (o) => { window.serverKeyBytes = o.applicationServerKey.length; current = sub; return sub; } } };
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { ready: Promise.resolve(reg), register: async () => reg, addEventListener() {} } });
+    window.PushManager = function PushManager() {};
+    let perm = 'default';
+    window.Notification = { get permission() { return perm; }, requestPermission: async () => { perm = 'granted'; return perm; } };
+  });
+  await page.route('https://push.example/**', async (route) => {
+    const req = route.request();
+    const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST' };
+    if (req.method() === 'OPTIONS') { await route.fulfill({ status: 204, headers: cors }); return; }
+    const path = new URL(req.url()).pathname;
+    calls.push({ path, body: req.method() === 'POST' ? req.postDataJSON() : null });
+    await route.fulfill({ status: 200, contentType: 'application/json', headers: cors, body: JSON.stringify(path === '/vapid' ? { publicKey: `B${'A'.repeat(86)}` } : { ok: true }) });
+  });
+  const waitFor = async (fn, ms = 6000) => { for (const end = Date.now() + ms; Date.now() < end; await page.waitForTimeout(100)) if (fn()) return true; return false; };
+  const lastSync = () => calls.filter((c) => c.path === '/sync').at(-1)?.body;
+
+  await open(page, { profile: PROFILE, schedule: WEEK });
+  await openSettings(page);
+  await page.locator('#st-notify').click();
+  await page.getByText('On for this iPhone').waitFor();
+  check('Turning on subscribes with the server\'s key', (await page.evaluate(() => window.serverKeyBytes)) === 65);
+  const first = lastSync();
+  check('…and sends the plan, time zone and reminder time', !!first && first.tz === 'UTC' && first.reminders.on && first.reminders.time === '08:00'
+    && first.plan.some((e) => e.date === '2026-10-07' && e.title === 'Gym and swim today') && first.week.length === 7, JSON.stringify(first)?.slice(0, 200));
+  await page.locator('#st-notify-time').fill('17:30');
+  await page.locator('#st-notify-time').dispatchEvent('change');
+  check('Changing the time sends it', await waitFor(() => lastSync()?.reminders.time === '17:30'));
+  await page.locator('#st-notify-milestones').click();
+  check('Milestones can be turned off', await waitFor(() => lastSync()?.milestones === false));
+  await page.locator('#st-notify-milestones').click();
+  await page.getByRole('button', { name: 'Send a test notification' }).click();
+  check('The test button sends one', await waitFor(() => calls.some((c) => c.path === '/notify' && c.body.tag === 'test')));
+
+  await tabTo(page, 'Today');
+  await page.locator('.wcard.gym').getByRole('button', { name: 'Start workout' }).click();
+  await page.locator('.ex-card').first().locator('.set-check').first().click();
+  await page.locator('.session-head').getByRole('button', { name: 'Finish' }).click();
+  await page.locator('.celebrate').waitFor();
+  check('A new milestone is sent as a notification', await waitFor(() => calls.some((c) => c.path === '/notify' && c.body.title === 'New milestone: First workout')));
+  check('…and the plan is re-sent with only the swim left today', await waitFor(() => /^Swim today/.test(lastSync()?.plan.find((e) => e.date === '2026-10-07')?.title || '')));
+  await btn(page, 'Done').click();
+
+  await openSettings(page);
+  await page.locator('#st-notify').click();
+  check('Turning off tells the server', await waitFor(() => calls.some((c) => c.path === '/unsubscribe')));
+  await page.waitForFunction(() => window.unsubscribed === true, null, { timeout: 3000 });
+  check('…and unsubscribes this phone', !(await page.locator('#st-notify').isChecked()));
 });
 
 test('finishing with nothing ticked asks first', async ({ newPage, open, check }) => {

@@ -14,8 +14,10 @@ import './views/session-gym.js';
 import './views/session-swim.js';
 import './views/celebration.js';
 import { start } from './app.js';
+import { initPush } from './notify.js';
 
 start();
+initPush();
 
 // Offline support when installed from its own web address (not inside a frame).
 const framed = (() => { try { return window.self !== window.top; } catch { return true; } })();

@@ -132,7 +132,7 @@ iPhone web apps can't schedule notifications themselves, so a small push server 
 - [x] **6.3 Milestones.**
   - `js/milestones.js` holds the list; finishing a session stores any new ones on it.
   - The celebration shows them, and a notification goes out when notifications are on.
-- [ ] **6.4 Cloudflare setup** (the user, about 5 minutes): account, API token, and the two GitHub secrets (`server/README.md`).
+- [ ] **6.4 Cloudflare setup** (the user, a few minutes): account, an API token, and one GitHub secret, `CLOUDFLARE_API_TOKEN` (`server/README.md`). The workflow finds the account ID from the token.
 - [ ] **6.5 Deploy and connect.** Run the Push server workflow, put its address in `PUSH_URL` in `js/notify.js`, merge, and turn notifications on from the iPhone.
 
 ## Log
